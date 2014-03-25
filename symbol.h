@@ -30,14 +30,13 @@
 class SCSection;
 class SCVersionDef;
 class SCVersionList;
+class SCRelocation;
+class SCRelocationList;
 
-enum SYM_SD_TYPE {
-    SYM_UNK = 0,
-    SYM_LOCAL = 1,
-    SYM_GOT = 2,
-    SYM_PLT = 4, 
-    SYM_OUT = 8
-};
+#define SYM_LOCAL 1
+#define SYM_GOT (1 << 1)
+#define SYM_PLT (1 << 2)
+#define SYM_OUT (1 << 3)
 
 class SCSymbol
 {
@@ -65,7 +64,7 @@ class SCSymbol
         getSymbolName()
         { return this->sym_name; }
         
-        SYM_SD_TYPE 
+        int 
         getSymbolSdType()
         { return this->sym_sd_type; }
         
@@ -80,10 +79,24 @@ class SCSymbol
         UINT32
         getSymbolIndex()
         { return this->sym_index; }
+        
+        int
+        getSymbolSDType()
+        { return this->sym_sd_type; }
 
         void
-        setSymbolSdType(SYM_SD_TYPE sd)
-        { this->sym_sd_type = sd; }
+        addSymbolSdType(int sd)
+        //{ this->sym_sd_type = (int)this->sym_sd_type | sd; }
+        { this->sym_sd_type |= sd; }
+        
+        void
+        delSymbolSdType(int sd)
+        //{ this->sym_sd_type = this->sym_sd_type & (int)~sd; }
+        { this->sym_sd_type &= ~sd; }
+        
+        void
+        setSymbolType(UINT8 type)
+        { this->sym_type = type; }
         
         void 
         setSymbolIndex(int index)
@@ -98,13 +111,14 @@ class SCSymbol
             sym_binding(sym.sym_binding),
             sym_other(sym.sym_other),
             sym_shndx(sym.sym_shndx),
-            sym_index(sym.sym_index)
+            sym_index(sym.sym_index),
+            sym_sd_type(sym.sym_sd_type),
+            sym_sec(sym.sym_sec)
     {
         int name_length = strlen((const char*)sym.sym_name);
         this->sym_name = (UINT8 *)malloc(name_length + 1);
         strcpy((char *)this->sym_name, (const char*)sym.sym_name);
         this->sym_name[name_length] = '\0';
-        //this->sym_sd_type = SYM_UNK;
     }
 
         SCSymbol& operator=(const SCSymbol&);
@@ -119,7 +133,7 @@ class SCSymbol
         UINT32 sym_index;
         UINT8 *sym_name;
         SCSection *sym_sec;
-        SYM_SD_TYPE sym_sd_type;
+        int sym_sd_type;
 };
 
 class SCSymbolDYN : public SCSymbol
@@ -181,17 +195,13 @@ class SCSymbolListREL
         init(SCFileREL&, SCSectionList *, SCSectionList *);
         
         SCSymbol*
-        getSymbolByName(UINT8 *);
+        getSymbolByName(const char*);
         
         SCSymbol*
         getSymbolByIndex(int);
         
         void
         testSymbolList();
-        
-        //vector<SCSymbol*>
-        //getSymbolList()
-        //{ return this->sym_list; }
 
     private:
         vector<SCSymbol*> sym_list;
@@ -204,10 +214,10 @@ class SCSymbolListDYN
         init(SCFileDYN&, SCSectionList *);
 
         void
-        make(SCSymbolListREL *, SCSymbolListDYN *);
-
+        make(SCSymbolListREL *, SCSymbolListDYN *, SCRelocationList *);
+        
         SCSymbolDYN*
-        getSymbolByName(UINT8 *);
+        getSymbolByName(const char*);
         
         SCSymbolDYN*
         getSymbolByIndex(int);
@@ -216,6 +226,9 @@ class SCSymbolListDYN
         testSymbolList();
         
     private:
+        void markDynSymbol(SCSymbolListREL *, SCSymbolListDYN *);
+        void addGOTPLTForRelocations(SCSymbolListREL *, SCRelocationList *);
+        
         vector<SCSymbolDYN*> dynsym_list;
 };
 

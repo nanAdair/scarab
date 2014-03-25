@@ -20,28 +20,77 @@
 #define RELOCATION_H
 
 #include <vector>
+#include <elf.h>
 #include "type.h"
+#include "section.h"
+#include "symbol.h"
+#include "file.h"
 
-class Relocation
+class SCSymbol;
+class SCFileREL;
+
+class SCRelocation
 {
+    public:
+        SCRelocation(Elf32_Rel *rel) :
+            rel_offset(rel->r_offset),
+            rel_type(rel->r_info & 0xff) {}
+        
+        UINT32
+        getRelOffset()
+        { return this->rel_offset; }
+        
+        UINT8 
+        getRelType()
+        { return this->rel_type; }
+        
+        SCSection *
+        getRelSection()
+        { return this->rel_sec; }
+        
+        SCSymbol *
+        getRelSymbol()
+        { return this->rel_sym; }
+
+        void
+        setRelOffset(UINT32 offset)
+        { this->rel_offset = offset; }
+        
+        void
+        setRelType(UINT8 type)
+        { this->rel_type = type; }
+        
+        void
+        setRelSection(SCSection *sec)
+        { this->rel_sec = sec; }
+        
+        void 
+        setRelSymbol(SCSymbol *sym)
+        { this->rel_sym = sym; }
+
+        
     private:
         UINT32 rel_offset;
         UINT8  rel_type;
-        UINT32 rel_link;
-        UINT32 rel_info;
-        UINT32 rel_sym_index;
-        UINT32 rel_value;
-        UINT32 rel_addend;
+        SCSymbol *rel_sym;
+        SCSection *rel_sec;
 };
 
-class Relocation_List
+class SCRelocationList
 {
     public:
         void
-        add_item(Relocation*);
+        init(SCFileREL&, SCSectionList *, SCSectionList *, SCSymbolListREL *);
+        
+        void 
+        testRelocationList();
+        
+        vector<SCRelocation*>*
+        getRelList()
+        { return &(this->rel_list); }
     
     private:
-        vector<Relocation*> rel_list;
+        vector<SCRelocation*> rel_list;
 };
 
 #endif

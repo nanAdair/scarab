@@ -21,6 +21,7 @@
 #include "file.h"
 #include "section.h"
 #include "symbol.h"
+#include "relocation.h"
 
 int main(int argc, char *argv[])
 {
@@ -43,11 +44,14 @@ int main(int argc, char *argv[])
     SCSymbolListREL sym_list;
     SCSymbolListDYN so_sym_list, dynsym_list;
     sym_list.init(temp, &obj_sec_list, &merge_list);
+    
+    SCRelocationList rel_list;
+    rel_list.init(temp, &obj_sec_list, &merge_list, &sym_list);
+    //rel_list.testRelocationList();
     //sym_list.testSymbolList();
     so_sym_list.init(tempso, &so_sec_list);
-    //sym_list.testSymbolList();
     //so_sym_list.testSymbolList();
-    dynsym_list.make(&sym_list, &so_sym_list);
+    dynsym_list.make(&sym_list, &so_sym_list, &rel_list);
     dynsym_list.testSymbolList();
     
     //so_sec_list.testSectionList();

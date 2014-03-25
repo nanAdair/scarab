@@ -20,6 +20,7 @@
 #include <string.h>
 #include <iostream>
 #include "symbol.h"
+#include "relocation.h"
 
 void SCSymbol::init(UINT8 *sym_strn_table, SCSectionList *sl, SCSectionList *msl)
 {
@@ -57,6 +58,24 @@ void SCSymbolListREL::init(SCFileREL &file, SCSectionList *sl, SCSectionList *ms
         SCSymbol *sym = new SCSymbol(cur_sym, i);
         sym->init(sym_strn_table, sl, msl);
         this->sym_list.push_back(sym);
+    }
+}
+
+SCSymbol *SCSymbolListREL::getSymbolByName(const char *name)
+{
+    vector<SCSymbol*>::iterator it;
+    for (it = this->sym_list.begin(); it != this->sym_list.end(); ++it) {
+        if (!strcmp((const char *)(*it)->getSymbolName(), name))
+            return *it;
+    }
+}
+
+SCSymbol *SCSymbolListREL::getSymbolByIndex(int index)
+{
+    vector<SCSymbol*>::iterator it;
+    for (it = this->sym_list.begin(); it != this->sym_list.end(); ++it) {
+        if ((*it)->getSymbolIndex() == index)
+            return *it;
     }
 }
 
@@ -104,10 +123,29 @@ void SCSymbolListDYN::init(SCFileDYN &file, SCSectionList *sl)
     }
 }
 
+SCSymbolDYN *SCSymbolListDYN::getSymbolByName(const char *name)
+{
+    vector<SCSymbolDYN*>::iterator it;
+    for (it = this->dynsym_list.begin(); it != this->dynsym_list.end(); ++it) {
+        if (!strcmp((const char *)(*it)->getSymbolName(), name))
+            return *it;
+    }
+    return NULL;
+}
+
+SCSymbolDYN *SCSymbolListDYN::getSymbolByIndex(int index)
+{
+    vector<SCSymbolDYN*>::iterator it;
+    for (it = this->dynsym_list.begin(); it != this->dynsym_list.end(); ++it) {
+        if ((*it)->getSymbolIndex() == index)
+            return *it;
+    }
+    return NULL;
+}
 void SCSymbolListDYN::testSymbolList()
 {
     vector<SCSymbolDYN*>::iterator it;
-    for (it = this->dynsym_list.begin() + 2; it != this->dynsym_list.end(); ++it) {
+    for (it = this->dynsym_list.begin(); it != this->dynsym_list.end(); ++it) {
         cout << (*it)->getSymbolIndex() << "  " << (*it)->sym_name << "  "
             << hex << (*it)->sym_value << "  " << (*it)->sym_version << " " << endl;
         //cout << (*it)->sym_version_name << " ";
@@ -115,55 +153,93 @@ void SCSymbolListDYN::testSymbolList()
     }
 }
 
-void SCSymbolListDYN::make(SCSymbolListREL *obj_sym_list, SCSymbolListDYN *so_sym_list)
+/* mark first
+ * then add the item to the vector*/
+void SCSymbolListDYN::make(SCSymbolListREL *obj_sym_list, SCSymbolListDYN *so_sym_list, SCRelocationList *rel_list)
 {
+    this->markDynSymbol(obj_sym_list, so_sym_list);
+    this->addGOTPLTForRelocations(obj_sym_list, rel_list);
+    
     vector<SCSymbol*>::iterator it;
     vector<SCSymbolDYN*>::iterator dit;
     int index = 0;
+
+    for (it = obj_sym_list->sym_list.begin(); it != obj_sym_list->sym_list.end(); ++it) {
+        SCSymbolDYN *sym;
+        if ((*it)->getSymbolSDType() == SYM_LOCAL)
+            continue;
+        
+        sym = new SCSymbolDYN(*it);
+        if ((*it)->getSymbolSDType() != SHN_UNDEF) {
+            SCSymbolDYN *dynsym = so_sym_list->getSymbolByName((const char*)(*it)->getSymbolName());
+            if (dynsym) {
+                sym->setSymbolVersion(dynsym->getSymbolVersion());
+                sym->setSymbolVersionName(dynsym->getSymbolVersionName());
+                sym->setSymbolFile(dynsym->getSymbolFile());
+            }
+        }
+        else
+            sym->setSymbolVersion(1);
+        sym->setSymbolIndex(index++);
+        this->dynsym_list.push_back(sym);
+    }
+}
+    
+void SCSymbolListDYN::markDynSymbol(SCSymbolListREL *obj_sym_list, SCSymbolListDYN *so_sym_list)
+{
+    vector<SCSymbol*>::iterator it;
+    vector<SCSymbolDYN*>::iterator dit;
     
     for (dit = so_sym_list->dynsym_list.begin(); dit != so_sym_list->dynsym_list.end(); ++dit) {
         for (it = obj_sym_list->sym_list.begin(); it != obj_sym_list->sym_list.end(); ++it) {
-            SCSymbolDYN *sym;
             if (!strcmp((const char *)(*it)->getSymbolName(), (const char *)(*dit)->getSymbolName()) && 
                     (*it)->getSymbolSdType() == SYM_LOCAL) {
-                sym = new SCSymbolDYN(*it);
                 
                 if ((*it)->getSymbolIndex() == 0) {
-                    (*it)->setSymbolSdType(SYM_OUT);
-                    
-                    sym->setSymbolSdType(SYM_OUT);
-                    sym->setSymbolIndex(index++);
-                    this->dynsym_list.push_back(sym);
+                    (*it)->addSymbolSdType(SYM_OUT);
+                    (*it)->delSymbolSdType(SYM_LOCAL);
                     break;
                 }
                 
                 if ((*it)->getSymbolShndx() != SHN_UNDEF) {
-                    (*it)->setSymbolSdType(SYM_OUT);
-                    
-                    sym->setSymbolSdType(SYM_OUT);
-                    sym->setSymbolVersion(1);
+                    (*it)->addSymbolSdType(SYM_OUT);
+                    (*it)->delSymbolSdType(SYM_LOCAL);
                 }
                 else if ((*dit)->getSymbolType() == STT_FUNC || (*dit)->getSymbolType() == STT_GNU_IFUNC) {
-                    (*it)->setSymbolSdType(SYM_PLT);
-                    
-                    sym->setSymbolSdType(SYM_PLT);
-                    sym->setSymbolVersion((*dit)->getSymbolVersion());
-                    sym->setSymbolVersionName((*dit)->getSymbolVersionName());
-                    sym->setSymbolFile((*dit)->getSymbolFile());
+                    (*it)->addSymbolSdType(SYM_PLT);
+                    (*it)->delSymbolSdType(SYM_LOCAL);
+                    (*it)->setSymbolType((*dit)->getSymbolType());
                 }
                 else {
-                    (*it)->setSymbolSdType(SYM_GOT);
-                    
-                    sym->setSymbolSdType(SYM_GOT);
-                    sym->setSymbolVersion((*dit)->getSymbolVersion());
-                    sym->setSymbolVersionName((*dit)->getSymbolVersionName());
-                    sym->setSymbolFile((*dit)->getSymbolFile());
+                    (*it)->addSymbolSdType(SYM_GOT);
+                    (*it)->delSymbolSdType(SYM_LOCAL);
                 }
-                
-                sym->setSymbolIndex(index++);
-                this->dynsym_list.push_back(sym);
                 break;
             }
+        }
+    }
+}
+
+void SCSymbolListDYN::addGOTPLTForRelocations(SCSymbolListREL *symList, SCRelocationList *relList)
+{
+    vector<SCRelocation*> *rel_list = relList->getRelList();
+    vector<SCRelocation*>::iterator it;
+    
+    for (it = rel_list->begin(); it != rel_list->end(); ++it) {
+        SCSymbol *sym;
+        if ((*it)->getRelType() == R_386_GOT32) {
+            sym = (*it)->getRelSymbol();
+            if (sym->getSymbolShndx() != SHN_UNDEF)
+                continue;
+            if (!(sym->getSymbolSDType() & SYM_GOT))
+                sym->addSymbolSdType(SYM_GOT);
+        }
+        if ((*it)->getRelType() == R_386_PLT32) {
+            sym = (*it)->getRelSymbol();
+            if (sym->getSymbolShndx() != SHN_UNDEF)
+                continue;
+            if (!(sym->getSymbolSDType() & SYM_PLT))
+                sym->addSymbolSdType(SYM_PLT);
         }
     }
 }
