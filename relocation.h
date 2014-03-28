@@ -26,15 +26,19 @@
 #include "symbol.h"
 #include "file.h"
 
+class SCSectionList;
+class SCSection;
 class SCSymbol;
 class SCFileREL;
 
 class SCRelocation
 {
     public:
+        friend class SCRelocationList;
         SCRelocation(Elf32_Rel *rel) :
             rel_offset(rel->r_offset),
-            rel_type(rel->r_info & 0xff) {}
+            rel_type(rel->r_info & 0xff),
+            rel_value(0) {}
         
         UINT32
         getRelOffset()
@@ -51,6 +55,10 @@ class SCRelocation
         SCSymbol *
         getRelSymbol()
         { return this->rel_sym; }
+        
+        UINT32
+        getRelValue()
+        { return this->rel_value; }
 
         void
         setRelOffset(UINT32 offset)
@@ -67,13 +75,39 @@ class SCRelocation
         void 
         setRelSymbol(SCSymbol *sym)
         { this->rel_sym = sym; }
-
+        
+        void
+        setRelValue(UINT32 value)
+        { this->rel_value = value; }
         
     private:
         UINT32 rel_offset;
         UINT8  rel_type;
         SCSymbol *rel_sym;
         SCSection *rel_sec;
+        UINT32 rel_value;
+        
+        int
+        getAddend();
+        
+        void
+        applyRelocation_32(SCSymbolListDYN *);
+        
+        void
+        applyRelocation_PC32(SCSectionList *, SCSymbolListDYN *);
+        
+        void
+        applyRelocation_GOTPC();
+        
+        void
+        applyRelocation_GOTOFF(SCSectionList *);
+        
+        void
+        applyRelocation_GOT32(SCSectionList *, SCSymbolListDYN *);
+        
+        void
+        applyRelocation_PLT32(SCSectionList *, SCSymbolListDYN *);
+        
 };
 
 class SCRelocationList
@@ -84,6 +118,9 @@ class SCRelocationList
         
         void 
         testRelocationList();
+        
+        void
+        applyRelocations(SCSectionList *, SCSymbolListDYN *);
         
         vector<SCRelocation*>*
         getRelList()

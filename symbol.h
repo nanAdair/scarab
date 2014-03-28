@@ -22,16 +22,24 @@
 #include <vector>
 #include <stdlib.h>
 #include <elf.h>
+#include <string.h>
 #include "file.h"
 #include "type.h"
 #include "section.h"
 #include "version.h"
 
 class SCSection;
+class SCSectionList;
 class SCVersionDef;
 class SCVersionList;
 class SCRelocation;
 class SCRelocationList;
+class SCSymbolListDYN;
+
+#define INIT_ARRAY_START "__init_array_start"
+#define INIT_ARRAY_END   "__init_array_end"
+
+#define GOT_SYMBOL_NAME  "_GLOBAL_OFFSET_TABLE_"
 
 #define SYM_LOCAL 1
 #define SYM_GOT (1 << 1)
@@ -80,10 +88,30 @@ class SCSymbol
         getSymbolIndex()
         { return this->sym_index; }
         
-        int
-        getSymbolSDType()
-        { return this->sym_sd_type; }
-
+        //int
+        //getSymbolSDType()
+        //{ return this->sym_sd_type; }
+        
+        UINT32
+        getSymbolNameOffset()
+        { return this->sym_name_offset; }
+        
+        UINT32
+        getSymbolValue()
+        { return this->sym_value; }
+        
+        UINT32
+        getSymbolSize()
+        { return this->sym_size; }
+        
+        UINT32
+        getSymbolBinding()
+        { return this->sym_binding; }
+        
+        UINT32
+        getSymbolOther()
+        { return this->sym_other; }
+        
         void
         addSymbolSdType(int sd)
         //{ this->sym_sd_type = (int)this->sym_sd_type | sd; }
@@ -101,6 +129,28 @@ class SCSymbol
         void 
         setSymbolIndex(int index)
         { this->sym_index = index; }
+        
+        void
+        setSymbolNameOffset(int offset)
+        { this->sym_name_offset = offset; }
+        
+        void
+        setSymbolValue(int addend);
+        
+        void
+        setSymbolSec(SCSection *sec)
+        { this->sym_sec = sec; }
+        
+        int
+        getSymbolOffsetPLT(SCSymbolListDYN *);
+        
+        int 
+        getSymbolOffsetGOT(SCSymbolListDYN *);
+        
+        /* Update the bss info and the related symbol
+         * based on the common symbol*/
+        void
+        handleCOMMON(SCSectionList *);
         
     protected:
         SCSymbol(const SCSymbol &sym):
@@ -201,6 +251,9 @@ class SCSymbolListREL
         getSymbolByIndex(int);
         
         void
+        updateSymbolValue(SCSectionList *);
+        
+        void
         testSymbolList();
 
     private:
@@ -221,6 +274,10 @@ class SCSymbolListDYN
         
         SCSymbolDYN*
         getSymbolByIndex(int);
+        
+        vector<SCSymbolDYN*>*
+        getSymbolList()
+        { return &(this->dynsym_list); }
         
         void
         testSymbolList();

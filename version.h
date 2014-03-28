@@ -21,8 +21,12 @@
 #include <vector>
 #include <elf.h>
 #include <iostream>
+#include <string.h>
 #include "section.h"
 #include "type.h"
+
+class SCSection;
+class SCSectionList;
 
 class SCVersionDef 
 {

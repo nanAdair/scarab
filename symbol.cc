@@ -44,6 +44,68 @@ void SCSymbol::init(UINT8 *sym_strn_table, SCSectionList *sl, SCSectionList *msl
     }
 }
 
+void SCSymbol::setSymbolValue(int addend)
+{ 
+    this->sym_value = this->sym_value + this->sym_sec->getSecAddress() + addend; 
+}
+
+int SCSymbol::getSymbolOffsetPLT(SCSymbolListDYN *sym_list)
+{
+    int index, i;
+    i = 0;
+    vector<SCSymbolDYN*>::iterator it;
+    for (it = sym_list->getSymbolList()->begin(); it != sym_list->getSymbolList()->end(); ++it) {
+        if ((*it)->getSymbolSdType() & SYM_PLT)
+            i++;
+        if (!strcmp((char *)this->sym_name, (char *)(*it)->getSymbolName())) {
+            index = i;
+            break;
+        }
+    }
+
+    return 0x10 * index;
+}
+
+void SCSymbol::handleCOMMON(SCSectionList *sl)
+{
+    SCSection *bss = sl->getSectionByName(".bss");
+    int addition, datasize, newdatasize, sym_size;
+    UINT32 align;
+    addition = 0;
+    datasize = bss->getSecDatasize();
+    sym_size = this->sym_size;
+    
+    align = bss->getSecAlign();
+    align = sym_size > align ? sym_size : align;
+    while ((datasize + addition) % align != 0)
+        addition++;
+    newdatasize = datasize + addition + sym_size;
+    
+    bss->setSecDatasize(newdatasize);
+    bss->setSecAlign(align);
+    this->sym_value = datasize + addition;
+    this->sym_sec = bss;
+}
+
+
+/* i: GOT number
+ * index: symbol index in got start from 1
+ * return value: -4 * (i - index + 1)*/
+int SCSymbol::getSymbolOffsetGOT(SCSymbolListDYN *sym_list)
+{
+    int i, index;
+    i = 0;
+    vector<SCSymbolDYN*>::iterator it;
+    for (it = sym_list->getSymbolList()->begin(); it != sym_list->getSymbolList()->end(); ++it) {
+        if ((*it)->getSymbolSdType() & SYM_GOT)
+            i++;
+        if (!strcmp((char *)this->sym_name, (char *)(*it)->getSymbolName())) 
+            index = i;
+    }
+
+    return (-4) * (i - index + 1);
+}
+
 void SCSymbolListREL::init(SCFileREL &file, SCSectionList *sl, SCSectionList *msl)
 {
     Elf32_Sym *cur_sym;
@@ -57,6 +119,8 @@ void SCSymbolListREL::init(SCFileREL &file, SCSectionList *sl, SCSectionList *ms
         cur_sym = file.getSymTable() + i;
         SCSymbol *sym = new SCSymbol(cur_sym, i);
         sym->init(sym_strn_table, sl, msl);
+        if (sym->getSymbolShndx() == SHN_COMMON)
+            sym->handleCOMMON(sl);
         this->sym_list.push_back(sym);
     }
 }
@@ -76,6 +140,33 @@ SCSymbol *SCSymbolListREL::getSymbolByIndex(int index)
     for (it = this->sym_list.begin(); it != this->sym_list.end(); ++it) {
         if ((*it)->getSymbolIndex() == index)
             return *it;
+    }
+}
+
+void SCSymbolListREL::updateSymbolValue(SCSectionList *sl)
+{
+    vector<SCSymbol*>::iterator it;
+    for (it = this->sym_list.begin(); it != this->sym_list.end(); ++it) {
+        if ((*it)->getSymbolShndx() != SHN_ABS && (*it)->getSymbolShndx() != SHN_UNDEF)
+            (*it)->setSymbolValue(0);
+        /* handle the special symbols here */
+        else {
+            if (!strcmp((char *)(*it)->getSymbolName(), INIT_ARRAY_START)) {
+                SCSection *init_array = sl->getSectionByName(INIT_ARRAY_SECTION_NAME);
+                (*it)->setSymbolSec(init_array);
+                (*it)->setSymbolValue(0);
+            }
+            else if (!strcmp((char *)(*it)->getSymbolName(), INIT_ARRAY_END)) {
+                SCSection *init_array = sl->getSectionByName(INIT_ARRAY_SECTION_NAME);
+                (*it)->setSymbolSec(init_array);
+                (*it)->setSymbolValue(init_array->getSecDatasize());
+            }
+            else if (!strcmp((char *)(*it)->getSymbolName(), GOT_SYMBOL_NAME)) {
+                SCSection *gotplt = sl->getSectionByName(GOT_PLT_SECTION_NAME);
+                (*it)->setSymbolSec(gotplt);
+                (*it)->setSymbolValue(0);
+            }
+        }
     }
 }
 
@@ -147,7 +238,10 @@ void SCSymbolListDYN::testSymbolList()
     vector<SCSymbolDYN*>::iterator it;
     for (it = this->dynsym_list.begin(); it != this->dynsym_list.end(); ++it) {
         cout << (*it)->getSymbolIndex() << "  " << (*it)->sym_name << "  "
-            << hex << (*it)->sym_value << "  " << (*it)->sym_version << " " << endl;
+            << hex << (*it)->sym_value << "  " << (*it)->sym_version << " ";
+        cout << (*it)->getSymbolBinding() << " ";
+        cout << (*it)->getSymbolOther() << " ";
+        cout << endl;
         //cout << (*it)->sym_version_name << " ";
         //cout << (*it)->sym_file << endl;
     }
@@ -166,11 +260,11 @@ void SCSymbolListDYN::make(SCSymbolListREL *obj_sym_list, SCSymbolListDYN *so_sy
 
     for (it = obj_sym_list->sym_list.begin(); it != obj_sym_list->sym_list.end(); ++it) {
         SCSymbolDYN *sym;
-        if ((*it)->getSymbolSDType() == SYM_LOCAL)
+        if ((*it)->getSymbolSdType() == SYM_LOCAL)
             continue;
         
         sym = new SCSymbolDYN(*it);
-        if ((*it)->getSymbolSDType() != SHN_UNDEF) {
+        if ((*it)->getSymbolShndx() == SHN_UNDEF) {
             SCSymbolDYN *dynsym = so_sym_list->getSymbolByName((const char*)(*it)->getSymbolName());
             if (dynsym) {
                 sym->setSymbolVersion(dynsym->getSymbolVersion());
@@ -231,14 +325,14 @@ void SCSymbolListDYN::addGOTPLTForRelocations(SCSymbolListREL *symList, SCReloca
             sym = (*it)->getRelSymbol();
             if (sym->getSymbolShndx() != SHN_UNDEF)
                 continue;
-            if (!(sym->getSymbolSDType() & SYM_GOT))
+            if (!(sym->getSymbolSdType() & SYM_GOT))
                 sym->addSymbolSdType(SYM_GOT);
         }
         if ((*it)->getRelType() == R_386_PLT32) {
             sym = (*it)->getRelSymbol();
             if (sym->getSymbolShndx() != SHN_UNDEF)
                 continue;
-            if (!(sym->getSymbolSDType() & SYM_PLT))
+            if (!(sym->getSymbolSdType() & SYM_PLT))
                 sym->addSymbolSdType(SYM_PLT);
         }
     }
