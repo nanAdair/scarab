@@ -22,6 +22,10 @@
 #include <elf.h>
 #include <vector>
 #include "type.h"
+#include "section.h"
+
+class SCSectionList;
+class SCSectionTable;
 
 class SCFile 
 {
@@ -34,6 +38,7 @@ class SCFile
         };
 
         SCFile() {}
+        ~SCFile();
         
         virtual void
         init(char *file_name) = 0;
@@ -73,6 +78,10 @@ class SCFile
         UINT8 *
         getFileName() const
         { return this->file_name; }
+        
+        void
+        setFileHeader(Elf32_Ehdr *header)
+        { this->file_header = header; }
         
         void
         testSectionTable() const;
@@ -164,8 +173,78 @@ class SCFileDYN : public SCFile
         Elf32_Sym* dynsym_table;
 };
 
-//class SCFile_EXEC : public SCFile
-//{
-//};
+class SCFileEXEC : public SCFile
+{
+    public:
+        
+        SCFileEXEC(): exec_sec_table(NULL), phdr_data(NULL) {}
+        
+        void
+        init(char *filename) {}
+        
+        ~SCFileEXEC();
+        
+        void 
+        prepare(SCSectionList *);
+        
+        void
+        writeOut(SCSectionList *);
+        
+    private:
+        SCSectionTable *exec_sec_table;
+        UINT8 *phdr_data;
+        
+        void
+        setSectionTable(SCSectionList *);
+        
+        void
+        makeFileHeader(SCSectionList *);
+        
+        void
+        setProgramHeader(SCSectionList *);
+
+        void
+        updateProgPhdr(Elf32_Phdr *);
+    
+        void
+        updateProgInterp(Elf32_Phdr *, SCSectionList *);
+        
+        void
+        updateProgLoad(Elf32_Phdr *, SCSectionList *);
+
+        void
+        updateProgDynamic(Elf32_Phdr *, SCSectionList *);
+
+        void
+        updateProgNote(Elf32_Phdr *, SCSectionList *);
+    
+};
+
+class SCSectionTable
+{
+    public:
+        
+        //SCSectionTable*
+        friend SCFileEXEC;
+
+        SCSectionTable(): content(NULL), size(0), number(0) {}
+        ~SCSectionTable();
+        
+        void
+        makeSectionTable(SCSectionList *);
+        
+        UINT32 
+        getSecTableNumber()
+        { return this->number; }
+
+        UINT8 *
+        getSecTableContent()
+        { return this->content; }
+
+    private:
+        UINT8 *content;
+        UINT32 size;
+        UINT32 number;
+};
 
 #endif

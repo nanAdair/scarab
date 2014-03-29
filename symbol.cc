@@ -143,33 +143,60 @@ SCSymbol *SCSymbolListREL::getSymbolByIndex(int index)
     }
 }
 
+/* update the symbol value and symbol shndx infomation */
 void SCSymbolListREL::updateSymbolValue(SCSectionList *sl)
 {
     vector<SCSymbol*>::iterator it;
     for (it = this->sym_list.begin(); it != this->sym_list.end(); ++it) {
-        if ((*it)->getSymbolShndx() != SHN_ABS && (*it)->getSymbolShndx() != SHN_UNDEF)
+        if ((*it)->getSymbolShndx() != SHN_ABS && (*it)->getSymbolShndx() != SHN_UNDEF){
             (*it)->setSymbolValue(0);
+            (*it)->setSymbolShndx((*it)->getSymbolSec()->getSecIndex());
+        }
         /* handle the special symbols here */
         else {
             if (!strcmp((char *)(*it)->getSymbolName(), INIT_ARRAY_START)) {
                 SCSection *init_array = sl->getSectionByName(INIT_ARRAY_SECTION_NAME);
                 (*it)->setSymbolSec(init_array);
                 (*it)->setSymbolValue(0);
+                (*it)->setSymbolShndx((*it)->getSymbolSec()->getSecIndex());
             }
             else if (!strcmp((char *)(*it)->getSymbolName(), INIT_ARRAY_END)) {
                 SCSection *init_array = sl->getSectionByName(INIT_ARRAY_SECTION_NAME);
                 (*it)->setSymbolSec(init_array);
                 (*it)->setSymbolValue(init_array->getSecDatasize());
+                (*it)->setSymbolShndx((*it)->getSymbolSec()->getSecIndex());
             }
             else if (!strcmp((char *)(*it)->getSymbolName(), GOT_SYMBOL_NAME)) {
                 SCSection *gotplt = sl->getSectionByName(GOT_PLT_SECTION_NAME);
                 (*it)->setSymbolSec(gotplt);
                 (*it)->setSymbolValue(0);
+                (*it)->setSymbolShndx((*it)->getSymbolSec()->getSecIndex());
             }
         }
     }
 }
 
+void SCSymbolListREL::updateSymbolSection(SCSection *symtab)
+{
+    int number = symtab->getSecDatasize() / symtab->getSecEntsize();
+    
+    vector<SCSymbol*>::iterator it;
+    it = this->sym_list.begin();
+    
+    for (int i = 0; i < number; i++) {
+        Elf32_Sym *cur_sym;
+        cur_sym = (Elf32_Sym *)(symtab->getSecData() + i * symtab->getSecEntsize());
+        
+        cur_sym->st_name = (*it)->getSymbolNameOffset();
+        cur_sym->st_value = (*it)->getSymbolValue();
+        cur_sym->st_size = (*it)->getSymbolSize();
+        cur_sym->st_info = ((*it)->getSymbolBinding() << 4) + (*it)->getSymbolType();
+        cur_sym->st_other = (*it)->getSymbolOther();
+        cur_sym->st_shndx = (*it)->getSymbolShndx();
+        
+        ++it;
+    }
+}
 void SCSymbolListREL::testSymbolList()
 {
     vector<SCSymbol*>::iterator it;

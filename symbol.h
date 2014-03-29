@@ -28,6 +28,8 @@
 #include "section.h"
 #include "version.h"
 
+class SCFileREL;
+class SCFileDYN;
 class SCSection;
 class SCSectionList;
 class SCVersionDef;
@@ -88,10 +90,6 @@ class SCSymbol
         getSymbolIndex()
         { return this->sym_index; }
         
-        //int
-        //getSymbolSDType()
-        //{ return this->sym_sd_type; }
-        
         UINT32
         getSymbolNameOffset()
         { return this->sym_name_offset; }
@@ -111,6 +109,10 @@ class SCSymbol
         UINT32
         getSymbolOther()
         { return this->sym_other; }
+        
+        SCSection*
+        getSymbolSec()
+        { return this->sym_sec; }
         
         void
         addSymbolSdType(int sd)
@@ -140,6 +142,10 @@ class SCSymbol
         void
         setSymbolSec(SCSection *sec)
         { this->sym_sec = sec; }
+        
+        void
+        setSymbolShndx(UINT16 shndx)
+        { this->sym_shndx = shndx; }
         
         int
         getSymbolOffsetPLT(SCSymbolListDYN *);
@@ -252,6 +258,9 @@ class SCSymbolListREL
         
         void
         updateSymbolValue(SCSectionList *);
+        
+        void
+        updateSymbolSection(SCSection *);
         
         void
         testSymbolList();

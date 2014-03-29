@@ -89,6 +89,10 @@ class SCSection
             sec_delta(0), sec_name(NULL), sec_data(NULL) {}
 
         UINT32
+        getSecNameOffset() const
+        { return this->sec_name_offset; }
+        
+        UINT32
         getSecType() const
         { return this->sec_type; }
         
@@ -123,6 +127,10 @@ class SCSection
         UINT32
         getSecDelta() const
         { return this->sec_delta; }
+
+        UINT32 
+        getSecFileOffset() const
+        { return this->sec_file_offset; }
         
         UINT32
         getSecDatasize() const
@@ -136,6 +144,18 @@ class SCSection
         UINT32
         getSecMisc() const
         { return this->sec_misc; }
+        
+        UINT32
+        getSecEntsize() const 
+        { return this->sec_entsize; }
+        
+        UINT32
+        getSecLink() const
+        { return this->sec_link; }
+        
+        UINT32
+        getSecInfo() const
+        { return this->sec_info; }
 
         void
         setSecName(const char *name) 
@@ -176,6 +196,14 @@ class SCSection
         void
         setSecFinalIndex(int index)
         { this->sec_final_index = index; }
+        
+        void
+        setSecLink(int link)
+        { this->sec_link = link; }
+        
+        void
+        setSecInfo(int info)
+        { this->sec_info = info; }
         
         void
         setSecContent(int offset, char *, int);
@@ -274,6 +302,19 @@ class SCSection
         
         UINT32
         getSecOrderScore();
+        
+        /* Renew the content of .rel.dyn and .rel.plt */
+        void
+        renewRELSection(UINT32 address);
+        
+        void
+        renewPLTSection(UINT32 address);
+        
+        void
+        renewGOTPLTSection(UINT32, UINT32);
+        
+        void
+        renewDynamicSection(SCSectionList *, char*[], int);
 };
 
 class SCSectionList
@@ -305,6 +346,9 @@ class SCSectionList
         
         void
         allocateSectionsAddress();
+        
+        void
+        renewSectionsInfo(char *file[], int num);
 
         void 
         testSectionList();
