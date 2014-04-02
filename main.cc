@@ -19,13 +19,16 @@
 #include <stdio.h>
 #include <iostream>
 #include <string.h>
+#include <vector>
 #include "section.h"
 #include "symbol.h"
 #include "relocation.h"
 #include "file.h"
+#include "disasm.h"
 
 void binaryAbstraction(SCSectionList *, SCSymbolListREL *, SCRelocationList *, char *[]);
 void patchSecContent(SCSectionList *sl, SCSymbolListREL *sym_list, char *argv[]);
+void disassembleExecutableSection(vector<INSTRUCTION*> *instr_list, SCSectionList *obj_sec_list);
 
 int main(int argc, char *argv[])
 {
@@ -34,16 +37,15 @@ int main(int argc, char *argv[])
     SCRelocationList *rel_list = new SCRelocationList();
     
     binaryAbstraction(obj_sec_list, sym_list, rel_list, argv);
-    //obj_sec_list.testSectionList();
     
+    vector<INSTRUCTION*> instr_list;
+    disassembleExecutableSection(&instr_list, obj_sec_list);
     patchSecContent(obj_sec_list, sym_list, argv);
     
     SCFileEXEC *exec = new SCFileEXEC();
     exec->prepare(obj_sec_list);
     exec->writeOut(obj_sec_list);
-    //cout << "sss" << endl;
-    //sym_list.testSymbolList();
-    
+
     //SCSection *sec;
     //sec = obj_sec_list.getSectionByName(INTERP_SECTION_NAME);
     //sec = obj_sec_list.getSectionByName(NOTE_SECTION_NAME);
@@ -131,4 +133,56 @@ void patchSecContent(SCSectionList *sl, SCSymbolListREL *sym_list, char *argv[])
     
     SCSection *symtab = sl->getSectionByName(SYMTAB_SECTION_NAME);
     sym_list->updateSymbolSection(symtab);
+}
+
+void disassembleExecutableSection(vector<INSTRUCTION*> *instr_list, SCSectionList *obj_sec_list)
+{
+    vector<SCSection*> *sect = obj_sec_list->getSectionList();
+    UINT8 buffer[MAX_INSTRUCTION_SIZE + 1];
+    UINT32 base = obj_sec_list->getSectionByIndex(1)->getSecAddress();
+    Disasm disasm;
+    INT8 ret = -1;
+
+    for (vector<SCSection*>::iterator itr = sect->begin(); itr != sect->end(); itr++){
+	UINT32 flags = (*itr)->getSecFlags();
+	if (flags & SHF_EXECINSTR){
+	    UINT8* data = (*itr)->getSecData(), *secName = (*itr)->getSecName();
+	    UINT32 size = MAX_INSTRUCTION_SIZE, address = (*itr)->getSecAddress();
+	    UINT32 dataSize = (*itr)->getSecDatasize(), start = 0;
+
+	    while (1){
+		INSTRUCTION *instr = (INSTRUCTION *)malloc(sizeof(INSTRUCTION));
+		if (start + (INT32)MAX_INSTRUCTION_SIZE > dataSize){
+		    size = dataSize - start + 1;
+		    if ((INT32)MAX_INSTRUCTION_SIZE > dataSize)
+			size -= 1;
+		}
+                memcpy(buffer, data + start, size);
+		ret = disasm.disassembler((INT8*)buffer, size, address, base, instr);
+		if (ret == NOT_ENOUGH_CODE)
+		    break;
+
+		if (strcmp((INT8*)secName, ".init") == 0)
+		    instr->secType = SECTION_INIT;
+		else if (strcmp((INT8*)secName, ".fini") == 0)
+		    instr->secType = SECTION_FINI;
+		else if (strcmp((INT8*)secName, ".text") == 0)
+		    instr->secType = SECTION_TEXT;
+		else if (strcmp((INT8*)secName, ".plt") == 0)
+		    instr->secType = SECTION_PLT;
+		else
+		    instr->secType = SECTION_OTHER;
+
+		instr_list->push_back(instr);
+
+		address += ret;
+		start += ret;
+	    }
+	}
+    }
+
+    
+    for (vector<INSTRUCTION*>::iterator itr = instr_list->begin(); itr != instr_list->end(); itr++)
+    printf("%s  %-30s%-35s%d\n", int2str(&(*itr)->address, sizeof(INT32), 1, 0),
+    (*itr)->ret_machineCode, (*itr)->assembly, (*itr)->secType);
 }
