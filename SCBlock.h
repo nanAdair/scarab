@@ -66,14 +66,19 @@ class SCBlock
         void setLastInstr(SCInstr *instr);
         void setFunction(SCFunction *fun);
 
+        UINT64 getFlag();
         UINT16 getType();
         EDGE_WEIGHT_TYPE getWeight();
         SCInstr* getFirstInstr();
         SCInstr* getLastInstr();
         UINT32 getID();
         SCFunction* getFunction();
+        EdgeListT getSucc();
+        EdgeListT getPred();
 
         // ==== methods ====
+        void moveSuccEdgesToBBL(SCBlock* to);
+
 
 
     private:
@@ -105,13 +110,15 @@ class SCBlockList
 
         void createBBLList(SCInstrList instrList);
         void markBBL(SCInstrList instrList);
+        void devideBBLByInstr(SCBlock* bbl, SCInstr* ins);
 
-        BlockListT getBlockList();
-        
+        SCBlock* getPrevBBL(SCBlock* bbl);
+        SCBlock* getNextBBL(SCBlock* bbl);
 
 
     private:
         BlockListT p_bbls;
+        BlockIterT getIterByBBL(SCBlock* bbl);
 
 }; /* -----  end of class SCBlockList  ----- */
 

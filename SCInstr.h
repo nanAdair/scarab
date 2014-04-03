@@ -20,6 +20,7 @@
 
 #include <list>
 #include "SCEdge.h"
+#include "SCFunction.h"
 
 #define InstrIterT (std::list<SCInstr*>::iterator)
 #define InstrListT (std::list<SCInstr*>)
@@ -227,6 +228,9 @@ class SCInstrList
         SCInstr* addressToInstruction();
         void addInstrAfterInstr(SCInstr* instr);
         void addInstrBeforeInstr(SCInstr* instr);
+
+        SCInstr* getPrevInstr(SCInstr* ins);
+        SCInstr* getNextInstr(SCInstr* ins);
 
 
 	private: 

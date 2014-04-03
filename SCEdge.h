@@ -75,6 +75,16 @@ class SCEdge
         bool hasFlag(UINT16 flag);
         void removeFlag(UINT16 flag);
 
+        void setTo(SCBlock* to);
+        void setFrom(SCBlock* from);
+        void setType(UINT16 type);
+        void setWeight(EDGE_WEIGHT_TYPE weight);
+
+        SCBlock* getTo();
+        SCBlock* getFrom();
+        UINT16 getType();
+        EDGE_WEIGHT_TYPE getWeight();
+
 
 
     private:

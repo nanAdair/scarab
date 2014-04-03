@@ -16,6 +16,7 @@
  * =====================================================================================
  */
 #include "SCBlock.h"
+#include <algorithm>
 
 SCBlock::SCBlock() {
     b_type = BT_INVALID;
@@ -65,6 +66,10 @@ void SCBlock::setFunction(SCFunction* fun) {
     this->b_fun = fun;
 }
 
+UINT64 getType() {
+    return this->b_flags;
+}
+
 UINT16 SCBlock::getType() {
     return this->b_type;
 }
@@ -87,6 +92,15 @@ UINT32 SCBlock::getID() {
 
 SCFunction* getFunction() {
     return this->b_fun;
+}
+
+void SCBlock::moveSuccEdgesToBBL(SCBlock* to) {
+    to->getSucc().clear();
+    for(EdgeIterT it=b_succ.begin(); it!=b_succ.end(); ++it) {
+        (*it)->setFrom(to);
+        to->getSucc().push_back(*it);
+    }
+    this->b_succ.clear();
 }
 
 
@@ -149,4 +163,77 @@ void SCBlockList::markBBL(SCInstrList instrList) {
         }
     }
     return;
+}
+
+void SCBlockList::devideBBLByInstr(SCBlock* bbl, SCInstr* ins) {
+    
+    if (ins->hasFlag(BBL_START)) {
+        Report(RT_MAIN, "Attempt to devide BBL with an instruction that start a BBL\n");
+        return;
+    }
+    
+    SCBlock* nbbl = new SCBlock();
+    nbbl->setType(bbl->getType());
+    
+    BlockIterT bblIt = std::find(p_bbls.begin(), p_bbls.end(), bbl);
+    if (bblIt == p_bbls.end()) {
+        Report(RP_MAIN, "FATAL: bbl not in the list!");
+    }
+    p_bbls.insert(++bblIt, nbbl);
+
+    bbl->moveSuccEdgesToBBL(nbbl);
+    nbbl->setFlag(bbl->getFlag());
+    
+    // Flag the instructions appropriately.
+    ins->setFlag(BBL_START);
+    SCInstr *prevIns = INSTRLIST->getNextInstr(ins);
+    if (prevIns) {
+        prevIns -> setFlag(BBL_END);
+    }
+
+    // Tell the instructions about the change.
+    InstrIterT insIter = std::find(INSTRLIST->getInstrList().begin(), INSTRLIST->getInstrList().end(), ins);
+    while(insIter != INSTRLIST->getInstrList().end()) {
+        (*insIter)->setBlock(nbbl);
+        if ((*insIter)->hasFlag(BBL_END)) {
+            break;
+        }
+        ++insIter;
+    }
+
+    // Update the info of the original bbl.
+    bbl->setType(BT_NORMAL);
+    bbl->setLastInstr(prevIns);
+
+    // Add an edge between the two bbls.
+    SCEdge* edge = EDGELIST->addBBLList(bbl, nbbl, ET_NORMAL);
+    edge->setWeight(bbl->getWeight());
+
+    if (bbl == bbl->getFunction()->getLastBlock()) {
+        bbl->getFunction()->setLastBlock(nbbl);
+    }
+
+    nbbl->setWeight(bbl->getWeight());
+
+    // TODO: flist update 
+
+}
+
+
+SCBlock* SCBlockList::getPrevBBL(SCBlock* bbl) {
+    BlockIterT it = std::find(p_bbls.begin(), p_bbls.end(), bbl);
+    if (it == p_bbls.end() || it == p_bbls.begin()) {
+        return NULL;
+    }
+    --it;
+    return *it;
+}
+
+
+SCBlock* SCBlockList::getNextBBL(SCBlock* bbl) {
+    BlockIterT it = std::find(p_bbls.begin(), p_bbls.end(), bbl);
+    if (it == p_bbls.end() || ++it == p_bbls.end()) {
+        return NULL;
+    }
+    return *it;
 }
