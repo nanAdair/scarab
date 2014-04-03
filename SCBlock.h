@@ -21,6 +21,9 @@
 #include <list>
 #include "SCInstr.h"
 
+#define BlockListT (std::list<SCBlock>)
+#define BlockIterT (std::list<SCBlock>::iterator)
+#define BLOCKLIST (SCBlockList::sharedBlockList())
 
 /*
  *    Basic Block Types
@@ -38,8 +41,6 @@
 #define BT_HALT 10  // BBL in which the program terminates
 #define BT_SYSCALL 11// basic block that ends in a system call
 #define BT_DATABLOCK 12// basic block that ends in a system call
-
-typedef list<SCInstr*>::iterator SCInstrIter;
 
 
 /*
@@ -63,12 +64,16 @@ class SCBlock
         void setWeight(EDGE_WEIGHT_TYPE weight);
         void setFirstInstr(SCInstr *instr);
         void setLastInstr(SCInstr *instr);
+        void setFunction(SCFunction *fun);
 
         UINT16 getType();
         EDGE_WEIGHT_TYPE getWeight();
         SCInstr* getFirstInstr();
         SCInstr* getLastInstr();
         UINT32 getID();
+        SCFunction* getFunction();
+
+        // ==== methods ====
 
 
     private:
@@ -96,12 +101,17 @@ class SCBlockList
 {
     public:
         SCBlockList ();                             /* constructor */
+        static SCBlock* sharedBlockList();
 
         void createBBLList(SCInstrList instrList);
+        void markBBL(SCInstrList instrList);
+
+        BlockListT getBlockList();
+        
 
 
     private:
-        list<SCBlock*> p_bbls;
+        BlockListT p_bbls;
 
 }; /* -----  end of class SCBlockList  ----- */
 

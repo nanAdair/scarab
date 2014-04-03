@@ -18,6 +18,12 @@
 #ifndef __Scarab__SCFunction__
 #define __Scarab__SCFunction__
 
+#include <list>
+
+#define FunListT (std::list<SCFunction*>)
+#define FunIterT (std::list<SCFunction*>::iterator)
+#define FUNLIST (SCFunctionList::sharedFunctionList())
+
 /*
  *  Function Flags
  */
@@ -107,6 +113,18 @@ class SCFunction
         string f_name;                  // function name n
         SCBlock *f_entry;                // entry block y
         SCBlock *f_exit;                 // exit block y
+};
+
+
+class SCFunctionList {
+    public:
+        SCFunctionList();
+        static SCFunctionList* sharedFunctionList();
+        void createFunctionList(BlockListT bbls);
+        void markFunctions(SymbolListT syms);
+
+    private:
+        FunListT p_funs;
 };
 
 #endif

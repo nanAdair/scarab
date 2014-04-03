@@ -19,6 +19,14 @@
 #define __Scarab__SCInstr__
 
 #include <list>
+#include "SCEdge.h"
+
+#define InstrIterT (std::list<SCInstr*>::iterator)
+#define InstrListT (std::list<SCInstr*>)
+#define INSTRLIST (SCInstrList::sharedInstrList())
+
+#define INSTR_FUNCTION(ins) ((ins)->getBlock()->getFunction())
+
 
 /*
  *  Instruction Flags
@@ -143,6 +151,7 @@
 
 class SCInstr {
 
+    public:
     // ==== getters and setters ====
     void setFlag(UINT64 flag);
     bool hasFlag(UINT64 flag);
@@ -153,23 +162,53 @@ class SCInstr {
     SCBlock* getBlock();
 
 
-    INT64 i_flags;                  // instruction flags n | t | q | a | c 主要在t中填好的
-    Operand *i_src;                 // first source operand n
-    Operand *i_src2;                // second source operand n
-    Operand *i_dest;                // destination operand n
-    ADDRESS i_address;              // original location MAGIC_NUMBER y | n
-    ADDRESS i_final_address;        // final location d
-    SCBlock *i_Bblock;         // basic block that contains this insn b
-    SCInstr *i_hashNext; // hash chain 相同hash的指令链表 p
-    int i_temp;                     // temporary: reloc offset or stack usage, 指令中重定位项的偏移 这个成员的用处在于data instr中定位重定位项 o
-    UINT32 i_id;                    // ID number 递增 y
-    UINT16 i_prefixes;              // instruction prefix n
-    UINT16 i_class;                 // instruction class (e.g. add, pop, imul) n
-    UINT32 i_length;                // length in bytes t
-    UINT8 i_type;                   // instruction type (e.g. cond, uncond...) n
-    UINT8 *i_literal_data;          // literal bytes associated with this insn
-                                        // (literal bytes flag must be set) m
-    UINT32 i_alignment;             // alignment constraints for instructions
+    // ==== methods ====
+    bool isPCChangingClass();
+    bool isReturnClass();
+    bool isCallClass();
+    bool isHaltClass();
+    bool isJumpClass();
+    bool isAddClass();
+    bool isAndClass();
+    bool isBranchClass();
+    bool isFPClass();
+    bool isLeaClass();
+    bool isLeaveClass();
+    bool isLoopCLass();
+    bool isMovClass();
+    bool isNOPClass();
+    bool isOPDIRClass();
+    bool isOPOFFClass();
+    bool isPopClass();
+    bool isPushClass();
+    bool isSubClass();
+    bool isSyscallClass();
+    
+    bool isDataInstruction();
+    bool isConditionalInstr();
+
+
+    bool isOnlyInstrInBBL();
+    
+    private:
+        void checkFlags();
+        void insertSetClassFlags();
+        INT64 i_flags;                  // instruction flags n | t | q | a | c 主要在t中填好的
+        Operand *i_src;                 // first source operand n
+        Operand *i_src2;                // second source operand n
+        Operand *i_dest;                // destination operand n
+        ADDRESS i_address;              // original location MAGIC_NUMBER y | n
+        ADDRESS i_final_address;        // final location d
+        SCBlock *i_block;         // basic block that contains this insn b
+        int i_temp;                     // temporary: reloc offset or stack usage, 指令中重定位项的偏移 这个成员的用处在于data instr中定位重定位项 o
+        UINT32 i_id;                    // ID number 递增 y
+        UINT16 i_prefixes;              // instruction prefix n
+        UINT16 i_class;                 // instruction class (e.g. add, pop, imul) n
+        UINT32 i_length;                // length in bytes t
+        UINT8 i_type;                   // instruction type (e.g. cond, uncond...) n
+        UINT8 *i_literal_data;          // literal bytes associated with this insn
+                                            // (literal bytes flag must be set) m
+        UINT32 i_alignment;             // alignment constraints for instructions
 };
 
 class SCInstrList
@@ -177,9 +216,21 @@ class SCInstrList
 	public:
 		SCInstrList();
 		~SCInstrList();
+        static SCInstrList* sharedInstrList();
+        
+        // ==== getters and setters ====
+        InstrListT getInstrList();
+
+        // ==== methods ==== 
+        void funResolveExitBlock();
+        void resolveTargets();
+        SCInstr* addressToInstruction();
+        void addInstrAfterInstr(SCInstr* instr);
+        void addInstrBeforeInstr(SCInstr* instr);
+
 
 	private: 
-		list<SCInstr*> p_instrs;
+		InstrListT p_instrs;
 };
 
 #endif

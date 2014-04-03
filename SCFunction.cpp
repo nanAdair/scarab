@@ -58,3 +58,46 @@ SCBlock* SCFunction::getEntryBlock() {
 SCBlock* SCFunction::getExitBlock() {
     return this->f_exit;
 }
+
+
+
+// ==== SCFunctionList ====
+static SCFunctionList* _sharedFunctionList = NULL;
+
+SCFunctionList::SCFunctionList() {
+    _sharedFunctionList = this;
+}
+
+SCFunctionList* SCFunctionList::sharedFunctionList() {
+    if (_sharedFunctionList == NULL) {
+        _sharedFunctionList = new SCFunctionList();
+    }
+    return _sharedFunctionList;
+}
+
+void SCFunctionList::createFunctionList(BlockListT blockList) {
+    BlockIterT bblIter;
+    BlockListT bbls = blockList.getBlockList();
+    SCFunction *fun;
+    for(bblIter=bbls.begin(); bblIter!=bbls.end(); ++bblIter) {
+        if ((*bblIter)->getFirstInstr()->hasFlag(FUN_START)) {
+
+            fun = new SCFunction();
+            fun->setFirstBlock(*bblIter); 
+            fun->setLastBlock(*bblIter);
+
+            // TODO: find the function name 
+            
+            (this->p_funs).push_back(fun);
+        }
+        else if ((*bblIter)->getLastBlock()->hasFlag(FUN_END)) {
+            fun->setLastBlock(*bblIter);
+        }
+        (*bblIter) -> setFunction(fun);
+    }
+    return;
+}
+
+void SCFunctionList::markFunctions(SymbolListT syms) {
+    // TODO: transplant it
+}

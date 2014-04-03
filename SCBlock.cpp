@@ -61,6 +61,10 @@ void SCBlock::setLastInstr(SCInstr* instr) {
     this->b_last = instr;
 }
 
+void SCBlock::setFunction(SCFunction* fun) {
+    this->b_fun = fun;
+}
+
 UINT16 SCBlock::getType() {
     return this->b_type;
 }
@@ -81,16 +85,34 @@ UINT32 SCBlock::getID() {
     return this->b_id;
 }
 
+SCFunction* getFunction() {
+    return this->b_fun;
+}
+
 
 // ==== SCBlockList ====
+static SCBlockList* _sharedBlockList = NULL;
+
 SCBlockList::SCBlockList() {
-    // nothing to do
+    _sharedBlockList = this;
+}
+
+SCBlockList* SCBlockList::sharedBlockList() {
+    if (_sharedBlockList == NULL) {
+        _sharedBlockList = new SCBlockList();
+    }
+    return _sharedBlockList;
+}
+
+BlockListT SCBlockList::getBlockList() {
+    return this->p_bbls;
 }
 
 void SCBlockList::createBBLList(SCInstrList instrList) {
-    SCInstrIter instrIter;
+    InstrIterT instrIter;
+    InstrListT instrs = instrList.getInstrList(); 
     SCBlock *bbl;
-    for(instrIter=instrList.begin(); instrIter!=instrList.end(); ++instrIter) {
+    for(instrIter=instrs.begin(); instrIter!=instrs.end(); ++instrIter) {
         if(instrIter->hasFlag(BBL_START)) {
             bbl = new SCBlock();
             bbl->setFirstInstr(instrIter);
@@ -103,4 +125,28 @@ void SCBlockList::createBBLList(SCInstrList instrList) {
         instrIter->setBlock(bbl); 
 
     }
+}
+
+void SCBlockList::markBBL(SCInstrList instrList) {
+    SCInstr* startins = (instrList.getInstrList()).front();
+    startins->setFlag(BBL_START);
+    
+    InstrIterT instrIter, nextInstrIter;
+    InstrListT instrs = instrList.getInstrList();
+    for(instrIter=instrs.begin(); instrIter!=instrs.end(); ++instrIter) {
+        if ((*instrIter)->isPCChangingClass() || (*instrIter)->isDataInstruction()) {
+            (*instrIter) -> setFlag(BBL_END);
+            nextInstrIter = std::next(instrIter, 1);
+            if (nextInstrIter != instrs.end()) {
+                (*nextInstrIter) -> setFlag(BBL_START);
+            }
+        }
+        nextInstrIter = std::next(instrIter, 1);
+        if (nextInstrIter != instrs.end()) {
+            (*instrIter) -> setFlag(BBL_END);
+            (*instrIter) -> setFlag(FUN_END);
+            break;
+        }
+    }
+    return;
 }
