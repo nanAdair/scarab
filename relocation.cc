@@ -87,7 +87,8 @@ void SCRelocationList::testRelocationList()
         cout << hex << (*it)->getRelOffset() << "  " << (int)(*it)->getRelType() << "  "
             << (*it)->getRelSection()->getSecName() << "  "
             << (*it)->getRelSymbol()->getSymbolName() << " ";
-        cout << (*it)->getRelValue() ;
+        cout << (*it)->getRelValue() << " ";
+        cout << (*it)->getRelAddend() << " ";
         
         cout << endl;
     }
@@ -103,6 +104,7 @@ int SCRelocation::getAddend()
     addend = *buffer;
     free(buffer);
     
+    this->rel_addend = addend;
     return addend;
 }
 

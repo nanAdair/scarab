@@ -51,7 +51,7 @@ char *int2str(void *num, unsigned long size, int fixedSize, int extend){
 	result[8 - strlen(result_reverse)] = '\0';
 	strcat(result, result_reverse);
     }
-    
+
     return result;
 }
 
@@ -551,7 +551,7 @@ INT8 Disasm::validatePrefix(){
         case 0xaa: case 0xab:
             lockAndRepeat = REP;
             break;
-        case 0xa6: case 0xa7: case 0xae: case 0xaf:
+        case 0xa6: case 0xa7: case 0xae: case 0xaf: case 0xc3:
             lockAndRepeat = REPE;
             break;
         default:
@@ -580,25 +580,25 @@ INT8 Disasm::decodeModRM(Operand *operand, INT8 operand_number)
     if (operand->type == OPERAND_MEMORY || operand->type == OPERAND_MEMORY_OFFSET || operand->type == OPERAND_XMM_MEMORY){
         currentByte++;
         if (instruction->mod != 3 || operand->type == OPERAND_MEMORY_OFFSET){       // memory
-            if (operand->operand_size == SIZE_INT32){
+            if (operand->operand_size == SIZE_DWORD){
                 if (OperandSizeOverride == PREFIX_OPERAND)
-                    operand->operand_size = SIZE_INT16;
+                    operand->operand_size = SIZE_WORD;
             }
-            else if (operand->operand_size == SIZE_FINT16){
+            else if (operand->operand_size == SIZE_FWORD){
                 if (OperandSizeOverride == PREFIX_OPERAND)
-                    operand->operand_size = SIZE_INT32;
+                    operand->operand_size = SIZE_DWORD;
             }
-            else if (operand->operand_size == SIZE_QINT16){
+            else if (operand->operand_size == SIZE_QWORD){
                 if (OperandSizeOverride == PREFIX_OPERAND)
-                    operand->operand_size = SIZE_INT32;
+                    operand->operand_size = SIZE_DWORD;
             }
-            else if (operand->operand_size != SIZE_INT16 &&
-                     operand->operand_size != SIZE_INT8 &&
+            else if (operand->operand_size != SIZE_WORD &&
+                     operand->operand_size != SIZE_BYTE &&
                      operand->operand_size != 512 &&
-                     operand->operand_size != SIZE_FIXED_INT32 &&
-                     operand->operand_size != SIZE_FIXED_FINT16 &&
-                     operand->operand_size != SIZE_FIXED_QINT16 &&
-                     operand->operand_size != SIZE_DQINT16){
+                     operand->operand_size != SIZE_FIXED_DWORD &&
+                     operand->operand_size != SIZE_FIXED_FWORD &&
+                     operand->operand_size != SIZE_FIXED_QWORD &&
+                     operand->operand_size != SIZE_DQWORD){
                 if (operand->operand_size == 108){
                     if (OperandSizeOverride == PREFIX_OPERAND)
                         operand->operand_size = 94;
@@ -644,8 +644,8 @@ INT8 Disasm::decodeModRM(Operand *operand, INT8 operand_number)
                     operand->segment = DS;
             }
 
-            if (AddressSizeOverride == PREFIX_ADDRESS && operand->addressing_size == SIZE_INT32)
-                operand->addressing_size = SIZE_INT16;
+            if (AddressSizeOverride == PREFIX_ADDRESS && operand->addressing_size == SIZE_DWORD)
+                operand->addressing_size = SIZE_WORD;
 
             if (operand->type == OPERAND_MEMORY_OFFSET){
                 currentByte--;
@@ -656,7 +656,7 @@ INT8 Disasm::decodeModRM(Operand *operand, INT8 operand_number)
             else{
                 if (operand->operand != -1){          // don't need further decode modr/m or sib
                     currentByte--;                    // don't need next byte to decode
-                    if (operand->addressing_size == SIZE_INT16){ // a little adjustment
+                    if (operand->addressing_size == SIZE_WORD){ // a little adjustment
                         if (operand->operand == AX)
                             operand->operand = ADDRESSING_AX;
                         else if (operand->operand == CX)
@@ -676,34 +676,34 @@ INT8 Disasm::decodeModRM(Operand *operand, INT8 operand_number)
                     }
                 }
                 else{
-                    if (operand->addressing_size == SIZE_INT16 || instruction->rm != 4){   // don't have sib
+                    if (operand->addressing_size == SIZE_WORD || instruction->rm != 4){   // don't have sib
                         operand->operand = instruction->rm & 7;
                         if (instruction->mod == 0){                       // mod = 0
-                            if (operand->addressing_size == SIZE_INT16){
+                            if (operand->addressing_size == SIZE_WORD){
                                 if (instruction->rm == 6){
                                     operand->operand = -1;
-                                    ret = getImmediateOrDisplacement(operand, IS_DISPLACEMENT, SIZE_INT16);
+                                    ret = getImmediateOrDisplacement(operand, IS_DISPLACEMENT, SIZE_WORD);
                                 }
                             }
                             else{
                                 if (instruction->rm == 5){
                                     operand->operand = -1;
-                                    ret = getImmediateOrDisplacement(operand, IS_DISPLACEMENT, SIZE_INT32);
+                                    ret = getImmediateOrDisplacement(operand, IS_DISPLACEMENT, SIZE_DWORD);
                                 }
                             }
                             if (ret == NOT_ENOUGH_CODE)
                                 return ret;
                         }
                         else if (instruction->mod == 1){            // mod = 1
-                            ret = getImmediateOrDisplacement(operand, IS_DISPLACEMENT, SIZE_INT8);
+                            ret = getImmediateOrDisplacement(operand, IS_DISPLACEMENT, SIZE_BYTE);
                             if (ret == NOT_ENOUGH_CODE)
                                 return ret;
                         }
                         else{               // mod = 2
-                            if (operand->addressing_size == SIZE_INT16)
-                                ret = getImmediateOrDisplacement(operand, IS_DISPLACEMENT, SIZE_INT16);
+                            if (operand->addressing_size == SIZE_WORD)
+                                ret = getImmediateOrDisplacement(operand, IS_DISPLACEMENT, SIZE_WORD);
                             else
-                                ret = getImmediateOrDisplacement(operand, IS_DISPLACEMENT, SIZE_INT32);
+                                ret = getImmediateOrDisplacement(operand, IS_DISPLACEMENT, SIZE_DWORD);
                             if (ret == NOT_ENOUGH_CODE)
                                 return ret;
                         }
@@ -719,13 +719,13 @@ INT8 Disasm::decodeModRM(Operand *operand, INT8 operand_number)
                         if (instruction->mod == 0){
                             if (operand->base == 5){
                                 operand->base = -1;
-                                ret = getImmediateOrDisplacement(operand, IS_DISPLACEMENT, SIZE_INT32);
+                                ret = getImmediateOrDisplacement(operand, IS_DISPLACEMENT, SIZE_DWORD);
                             }
                         }
                         else if (instruction->mod == 1)
-                            ret = getImmediateOrDisplacement(operand, IS_DISPLACEMENT, SIZE_INT8);
+                            ret = getImmediateOrDisplacement(operand, IS_DISPLACEMENT, SIZE_BYTE);
                         else
-                            ret = getImmediateOrDisplacement(operand, IS_DISPLACEMENT, SIZE_INT32);
+                            ret = getImmediateOrDisplacement(operand, IS_DISPLACEMENT, SIZE_DWORD);
                         if (ret == NOT_ENOUGH_CODE)
                             return ret;
                     }
@@ -733,8 +733,8 @@ INT8 Disasm::decodeModRM(Operand *operand, INT8 operand_number)
             }
         }
         else{      // mod == 3, register
-            if (OperandSizeOverride == PREFIX_OPERAND && operand->operand_size == SIZE_INT32)
-                operand->operand_size = SIZE_INT16;
+            if (OperandSizeOverride == PREFIX_OPERAND && operand->operand_size == SIZE_DWORD)
+                operand->operand_size = SIZE_WORD;
 
             operand->operand = instruction->rm & 7;
 
@@ -751,24 +751,24 @@ INT8 Disasm::decodeModRM(Operand *operand, INT8 operand_number)
             operand->operand = instruction->regop & 7;
 
         if (operand->type == OPERAND_REGISTER){
-            if (operand->operand_size == SIZE_INT32 && OperandSizeOverride == PREFIX_OPERAND)
-                operand->operand_size = SIZE_INT16;
-            else if (operand->operand_size == SIZE_QINT16 && OperandSizeOverride == PREFIX_OPERAND)
-                operand->scale = SIZE_INT32;
+            if (operand->operand_size == SIZE_DWORD && OperandSizeOverride == PREFIX_OPERAND)
+                operand->operand_size = SIZE_WORD;
+            else if (operand->operand_size == SIZE_QWORD && OperandSizeOverride == PREFIX_OPERAND)
+                operand->scale = SIZE_DWORD;
         }
     }
     else if (operand->type == OPERAND_IMMEDIATE){
         if (operand->operand != -1)
             return DECODE_SUCCESS;
-        else if (operand->operand_size == SIZE_INT8)
+        else if (operand->operand_size == SIZE_BYTE)
             ret = getImmediateOrDisplacement(operand, IS_IMMEDIATE, operand->operand_size);
-        else if (operand->operand_size == SIZE_INT16)
+        else if (operand->operand_size == SIZE_WORD)
             ret = getImmediateOrDisplacement(operand, IS_IMMEDIATE, operand->operand_size);
-        else if (operand->operand_size == SIZE_FIXED_INT32)
+        else if (operand->operand_size == SIZE_FIXED_DWORD)
             ret = getImmediateOrDisplacement(operand, IS_IMMEDIATE, operand->operand_size);
         else{
             if (OperandSizeOverride == PREFIX_OPERAND){
-                operand->operand_size = SIZE_INT16;
+                operand->operand_size = SIZE_WORD;
                 ret = getImmediateOrDisplacement(operand, IS_IMMEDIATE, operand->operand_size);
             }
             else
@@ -783,30 +783,30 @@ INT8 Disasm::decodeModRM(Operand *operand, INT8 operand_number)
     }
     else if (operand->type == OPERAND_FLOW){
         if (operand->operand_size == RELATIVE_ADDRESS_SHORT){
-            INT8 offset = machineCode[currentByte++];
-            instruction->new_eip = address + offset + currentByte;
+            operand->operand = machineCode[currentByte++];
+            instruction->new_eip = address + operand->operand + currentByte;
 
             if (OperandSizeOverride == PREFIX_OPERAND)
                 instruction->new_eip &= 0x0000ffff;
         }
         else if (operand->operand_size == ADDRESS_FAR_ABSOLUTE){
             if (OperandSizeOverride == PREFIX_OPERAND)
-                operand->operand_size = ADDRESS_FAR_ABSOLUTE_INT16;
+                operand->operand_size = ADDRESS_FAR_ABSOLUTE_WORD;
             else
-                operand->operand_size = ADDRESS_FAR_ABSOLUTE_INT32;
+                operand->operand_size = ADDRESS_FAR_ABSOLUTE_DWORD;
             ret = getImmediateOrDisplacement(operand, IS_NEW_EIP, operand->operand_size);
             if (ret == NOT_ENOUGH_CODE)
                 return ret;
 
-            ret = getImmediateOrDisplacement(operand, IS_NEW_CS, SIZE_INT16);
+            ret = getImmediateOrDisplacement(operand, IS_NEW_CS, SIZE_WORD);
             if (ret == NOT_ENOUGH_CODE)
                 return ret;
         }
         else if (operand->operand_size == RELATIVE_ADDRESS_FAR){
             if (OperandSizeOverride == PREFIX_OPERAND)
-                operand->operand_size = RELATIVE_ADDRESS_FAR_INT16;
+                operand->operand_size = RELATIVE_ADDRESS_FAR_WORD;
             else
-                operand->operand_size = RELATIVE_ADDRESS_FAR_INT32;
+                operand->operand_size = RELATIVE_ADDRESS_FAR_DWORD;
             ret = getImmediateOrDisplacement(operand, IS_NEW_EIP, operand->operand_size);
             if (ret == NOT_ENOUGH_CODE)
                 return ret;
@@ -845,17 +845,17 @@ INT8 Disasm::getImmediateOrDisplacement(Operand *operand, INT8 type, INT8 size)
     int s = 0, i = 1;
     INT32 immediate, temp;
 
-    if (size == SIZE_INT8 || size == RELATIVE_ADDRESS_SHORT){
+    if (size == SIZE_BYTE || size == RELATIVE_ADDRESS_SHORT){
         if (codeSize == currentByte)
             return NOT_ENOUGH_CODE;
         s = 8;
     }
-    else if (size == SIZE_INT16 || size == ADDRESS_FAR_ABSOLUTE_INT16 || size == RELATIVE_ADDRESS_FAR_INT16){
+    else if (size == SIZE_WORD || size == ADDRESS_FAR_ABSOLUTE_WORD || size == RELATIVE_ADDRESS_FAR_WORD){
         if (codeSize < currentByte + 2)
             return NOT_ENOUGH_CODE;
         s = 16;
     }
-    else if (size == SIZE_INT32 || size == ADDRESS_FAR_ABSOLUTE_INT32 || size == RELATIVE_ADDRESS_FAR_INT32){
+    else if (size == SIZE_DWORD || size == ADDRESS_FAR_ABSOLUTE_DWORD || size == RELATIVE_ADDRESS_FAR_DWORD){
         if (codeSize < currentByte + 4)
             return NOT_ENOUGH_CODE;
         s = 32;
@@ -879,8 +879,10 @@ INT8 Disasm::getImmediateOrDisplacement(Operand *operand, INT8 type, INT8 size)
     }
     else if (type == IS_NEW_CS)
         instruction->new_cs = immediate;
-    else
+    else{
         instruction->new_eip = immediate;
+        operand->operand = immediate;
+    }
 
     return ADD_SUCCESS;
 }
@@ -908,11 +910,11 @@ void Disasm::addRegister(Operand *operand, bool isDefault)
     if (isDefault)
         return;
 
-    if (operand->operand_size == SIZE_INT8)
+    if (operand->operand_size == SIZE_BYTE)
         strcat(assemblyCode, Register8[operand->operand]);
-    else if (operand->operand_size == SIZE_INT16)
+    else if (operand->operand_size == SIZE_WORD)
         strcat(assemblyCode, Register16[operand->operand]);
-    else if (operand->operand_size == SIZE_FIXED_INT32)
+    else if (operand->operand_size == SIZE_FIXED_DWORD)
         strcat(assemblyCode, Register32[operand->operand]);
     else
         strcat(assemblyCode, Register32[operand->operand]);
@@ -925,17 +927,21 @@ void Disasm::addRetCode()
         strcat(ret_machineCode, int2str(&machineCode[i], sizeof(INT8), 1, 0));
         strcat(ret_machineCode, " ");
     }
+
+    INT8 *binary = (INT8*)malloc(currentByte);
+    memcpy(binary, machineCode, currentByte);
+    instruction->binary = binary;
 }
 
 void Disasm::addImmediate(char *str, Operand *operand, INT8 size, bool noRegister, INT8 type, bool fixedSize, bool isAbsolute)
 {
     int isExtend = (strcmp(instruction->mnemonic, "or ") == 0 || strcmp(instruction->mnemonic, "and ") == 0 ||
                      strcmp(instruction->mnemonic, "xor ") == 0), s = 0, i = 0;
-    if (size == SIZE_INT8)
+    if (size == SIZE_BYTE)
         s = 8;
-    else if (size == SIZE_INT16 || size == ADDRESS_FAR_ABSOLUTE_INT16)
+    else if (size == SIZE_WORD || size == ADDRESS_FAR_ABSOLUTE_WORD)
         s = 16;
-    else if (size == SIZE_INT32 || size == ADDRESS_FAR_ABSOLUTE_INT32)
+    else if (size == SIZE_DWORD || size == ADDRESS_FAR_ABSOLUTE_DWORD)
         s = 32;
 
     INT32 immediate = -1;
@@ -1005,25 +1011,25 @@ void Disasm::copyOperand(Operand *operand, INT8 operand_number)
     }
 
     if (operand->type == OPERAND_MEMORY || operand->type == OPERAND_MEMORY_OFFSET || operand->type == OPERAND_XMM_MEMORY){
-        if (operand->operand_size == SIZE_INT8)
+        if (operand->operand_size == SIZE_BYTE)
             strcat(assemblyCode, "byte ptr ");
-        else if (operand->operand_size == SIZE_INT16)
+        else if (operand->operand_size == SIZE_WORD)
             strcat(assemblyCode, "word ptr ");
-        else if (operand->operand_size == SIZE_INT32)
+        else if (operand->operand_size == SIZE_DWORD)
             strcat(assemblyCode, "dword ptr ");
-        else if (operand->operand_size == SIZE_FIXED_INT32)
+        else if (operand->operand_size == SIZE_FIXED_DWORD)
             strcat(assemblyCode, "dword ptr ");
-        else if (operand->operand_size == SIZE_FINT16)
+        else if (operand->operand_size == SIZE_FWORD)
             strcat(assemblyCode, "fword ptr ");
-        else if (operand->operand_size == SIZE_FIXED_FINT16)
+        else if (operand->operand_size == SIZE_FIXED_FWORD)
             strcat(assemblyCode, "fword ptr ");
-        else if (operand->operand_size == SIZE_QINT16)
+        else if (operand->operand_size == SIZE_QWORD)
             strcat(assemblyCode, "qword ptr ");
-        else if (operand->operand_size == SIZE_FIXED_QINT16)
+        else if (operand->operand_size == SIZE_FIXED_QWORD)
             strcat(assemblyCode, "qword ptr ");
-        else if (operand->operand_size == SIZE_TINT8)
+        else if (operand->operand_size == SIZE_TBYTE)
             strcat(assemblyCode, "tbyte ptr ");
-        else if (operand->operand_size == SIZE_DQINT16)
+        else if (operand->operand_size == SIZE_DQWORD)
             strcat(assemblyCode, "dqword ptr ");
         else{
             sprintf(num, "%d", operand->operand_size);
@@ -1041,7 +1047,7 @@ void Disasm::copyOperand(Operand *operand, INT8 operand_number)
             addImmediate(assemblyCode, operand, operand->addressing_size, HAS_NO_REGISTER, IS_OFFSET, IS_NOT_FIXED_SIZE, IS_NOT_ABSOLUTE);
         else{
             if (operand->operand != -1){
-                if (operand->addressing_size == SIZE_INT16)
+                if (operand->addressing_size == SIZE_WORD)
                     strcat(assemblyCode, Register16_ModRM[operand->operand & 0xf]);
                 else
                     strcat(assemblyCode, Register32[operand->operand & 0xf]);
@@ -1091,19 +1097,19 @@ void Disasm::copyOperand(Operand *operand, INT8 operand_number)
         strcpy(temp_cs, "\0");
         strcpy(temp_eip, "\0");
         if (operand->operand_size == RELATIVE_ADDRESS_SHORT){
-            addImmediate(temp_eip, operand, SIZE_INT32, HAS_NO_REGISTER, IS_NEW_EIP, IS_FIXED_SIZE, IS_NOT_ABSOLUTE);
+            addImmediate(temp_eip, operand, SIZE_DWORD, HAS_NO_REGISTER, IS_NEW_EIP, IS_FIXED_SIZE, IS_NOT_ABSOLUTE);
             strcat(assemblyCode, temp_eip);
         }
-        else if (operand->operand_size == ADDRESS_FAR_ABSOLUTE_INT32 || operand->operand_size == ADDRESS_FAR_ABSOLUTE_INT16){
+        else if (operand->operand_size == ADDRESS_FAR_ABSOLUTE_DWORD || operand->operand_size == ADDRESS_FAR_ABSOLUTE_WORD){
             addImmediate(temp_eip, operand, operand->operand_size, HAS_NO_REGISTER, IS_NEW_EIP, IS_FIXED_SIZE, IS_ABSOLUTE);
-            addImmediate(temp_cs, operand, SIZE_INT16, HAS_NO_REGISTER, IS_NEW_CS, IS_FIXED_SIZE, IS_ABSOLUTE);
+            addImmediate(temp_cs, operand, SIZE_WORD, HAS_NO_REGISTER, IS_NEW_CS, IS_FIXED_SIZE, IS_ABSOLUTE);
 
             strcat(assemblyCode, temp_cs);
             strcat(assemblyCode, ":");
             strcat(assemblyCode, temp_eip);
         }
-        else if (operand->operand_size == RELATIVE_ADDRESS_FAR_INT32 || operand->operand_size == RELATIVE_ADDRESS_FAR_INT16){
-            addImmediate(temp_eip, operand, SIZE_INT32, HAS_NO_REGISTER, IS_NEW_EIP, IS_FIXED_SIZE, IS_NOT_ABSOLUTE);
+        else if (operand->operand_size == RELATIVE_ADDRESS_FAR_DWORD || operand->operand_size == RELATIVE_ADDRESS_FAR_WORD){
+            addImmediate(temp_eip, operand, SIZE_DWORD, HAS_NO_REGISTER, IS_NEW_EIP, IS_FIXED_SIZE, IS_NOT_ABSOLUTE);
 
             strcat(assemblyCode, temp_eip);
         }
@@ -1183,6 +1189,7 @@ void Disasm::copyInstruction(INSTRUCTION *instr)
     else
         instr->final_address = instr->address + currentByte;
 
+    instr->size = currentByte;
     free(instruction);
 }
 
@@ -1304,6 +1311,9 @@ INT32 Disasm::disassembler(INT8 MACHINECODE[], int CODESIZE, INT32 addr, INT32 b
         return NOT_ENOUGH_CODE;
     if (decodeModRM(instruction->src3, FOURTH_OPERAND) == NOT_ENOUGH_CODE)
         return NOT_ENOUGH_CODE;
+
+    if (instruction->dest)
+	instruction->operandSize = instruction->dest->operand_size;
 
     copyAssembleAndMachineCode(NOT_ONLY_PREFIX);
     copyInstruction(instr);

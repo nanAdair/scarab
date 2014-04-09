@@ -157,11 +157,11 @@ enum IMMEDIATE_TYPE{
 };
 /* operand size */
 enum OPERAND_SIZE{
-    SIZE_INT8, SIZE_INT16, SIZE_INT32, SIZE_FIXED_INT32,
-    SIZE_FINT16, SIZE_FIXED_FINT16, SIZE_QINT16, SIZE_FIXED_QINT16,
-    SIZE_TINT8, SIZE_DQINT16, RELATIVE_ADDRESS_SHORT, ADDRESS_FAR_ABSOLUTE,
-    ADDRESS_FAR_ABSOLUTE_INT32, ADDRESS_FAR_ABSOLUTE_INT16, RELATIVE_ADDRESS_FAR,
-    RELATIVE_ADDRESS_FAR_INT32, RELATIVE_ADDRESS_FAR_INT16, SIZE_XMM, SIZE_MM
+    SIZE_BYTE, SIZE_WORD, SIZE_DWORD, SIZE_FIXED_DWORD,
+    SIZE_FWORD, SIZE_FIXED_FWORD, SIZE_QWORD, SIZE_FIXED_QWORD,
+    SIZE_TBYTE, SIZE_DQWORD, RELATIVE_ADDRESS_SHORT, ADDRESS_FAR_ABSOLUTE,
+    ADDRESS_FAR_ABSOLUTE_DWORD, ADDRESS_FAR_ABSOLUTE_WORD, RELATIVE_ADDRESS_FAR,
+    RELATIVE_ADDRESS_FAR_DWORD, RELATIVE_ADDRESS_FAR_WORD, SIZE_XMM, SIZE_MM
 };
 
 /* pwd */
@@ -265,7 +265,7 @@ typedef struct _INSTRUCTION{
     /* flags */
     INT32 secType;
     INT8 s;        // sign or not
-    /* address and final address */
+    /* address */
     INT32 address;
     INT32 final_address;
     /* instruction type */
@@ -291,6 +291,12 @@ typedef struct _INSTRUCTION{
     /* new CS and ESP(if existed) */
     INT16 new_cs;
     INT32 new_eip;
+    /* size */
+    INT32 size;
+    /* operand size */
+    int operandSize;
+    /* binary */
+    INT8 *binary;
 } INSTRUCTION;
 
 #endif

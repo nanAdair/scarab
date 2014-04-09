@@ -682,7 +682,8 @@ void SCSection::expandSecData(char *data, int datasize, int flag)
     memcpy(buffer, this->sec_data, this->sec_datasize);
     memcpy(buffer + this->sec_datasize, data, datasize);
     
-    free(this->sec_data);
+    if (this->sec_data)
+        free(this->sec_data);
     this->sec_data = buffer;
     if (flag)
         this->sec_datasize = newdatasize;
@@ -876,14 +877,14 @@ void SCSectionList::addSections(const char *ld_file, SCSymbolListDYN *sym_list, 
     }
 }
 
-void SCSectionList::allocateSectionsAddress()
+void SCSectionList::allocateSectionsAddress(int flag)
 {
     UINT32 base_addr, offset;
     base_addr = 0x8048000;
     offset = 0x114;
     UINT32 addend = 0;
     
-    this->sortSections();
+    this->sortSections(flag);
     
     vector<SCSection*>::iterator it;
     for (it = this->sec_list.begin() + 1; it != this->sec_list.end(); ++it) {
@@ -974,13 +975,15 @@ void SCSectionList::renewSectionsInfo(char *file[], int num)
     }
 }
 
-void SCSectionList::sortSections()
+/* flag: 1, skip the rel sections
+ * flag: 0, don't skip the rel sections */
+void SCSectionList::sortSections(int flag)
 {
     int number_sections = 0;
     vector<SCSection*>::iterator it;
     /* delete the dump relocation sections and calculate section number*/
     for (it = this->sec_list.begin(); it != this->sec_list.end(); ++it) {
-        if ((*it)->getSecType() == SHT_REL && (*it)->getSecMisc() != 0) {
+        if ((*it)->getSecType() == SHT_REL && (*it)->getSecMisc() != 0 && flag) {
             this->sec_list.erase(it);
             --it;
             continue;
@@ -1051,3 +1054,139 @@ void SCSectionList::testSectionList()
 }
 
 
+void SCSectionList::updateSectionSize(vector<INSTRUCTION*> *instr_list)
+{
+    vector<INSTRUCTION*>::iterator it;
+    
+    int datasize = 0;
+    int last_sec, cur_sec;
+    it = instr_list->begin();
+    last_sec = cur_sec = (*it)->secType;
+    SCSection *sec;
+    
+    for (; it != instr_list->end(); it++) {
+        cur_sec = (*it)->secType;
+        if (cur_sec != last_sec) {
+            switch(last_sec) {
+                case SECTION_INIT:
+                    sec = this->getSectionByName(".init");
+                    break;
+                case SECTION_TEXT:
+                    sec = this->getSectionByName(".text");
+                    break;
+                case SECTION_FINI:
+                    sec = this->getSectionByName(".fini");
+                    break;
+                case SECTION_PLT:
+                    sec = this->getSectionByName(".plt");
+                    break;
+                default:
+                    cerr << "Can't handle instr sec type by now " << endl;
+                    exit(0);
+            }
+            
+            sec->setSecDatasize(datasize);
+            datasize = 0;
+            last_sec = cur_sec;
+        }
+        
+        datasize += (*it)->size;
+    }
+}
+
+void SCSectionList::updateSectionDataFromInstr(vector<INSTRUCTION*> *instr_list)
+{
+    const char *sec_name[] = {
+        ".init",
+        ".text",
+        ".fini",
+        ".plt"
+    };
+    
+    for (int i = 0; i < 4; i++) {
+        SCSection *sec = this->getSectionByName(sec_name[i]);
+        UINT8 *data = sec->getSecData();
+        
+        free(data);
+        sec->setSecData(NULL);
+        sec->setSecDatasize(0);
+    }
+
+    vector<INSTRUCTION*>::iterator it;
+    int last_sec, cur_sec;
+    last_sec = -1;
+    SCSection *sec;
+    
+    for (it = instr_list->begin(); it != instr_list->end(); it++) {
+        cur_sec = (*it)->secType;
+        if (cur_sec != last_sec) {
+            switch(cur_sec) {
+                case SECTION_INIT:
+                    sec = this->getSectionByName(".init");
+                    break;
+                case SECTION_TEXT:
+                    sec = this->getSectionByName(".text");
+                    break;
+                case SECTION_FINI:
+                    sec = this->getSectionByName(".fini");
+                    break;
+                case SECTION_PLT:
+                    sec = this->getSectionByName(".plt");
+                    break;
+                default:
+                    cerr << "Can't handle instr sec type by now in update sec data" << endl;
+                    exit(0);
+            }
+            
+            last_sec = cur_sec;
+        }
+        
+        sec->expandSecData((char *)(*it)->binary, (*it)->size, 1);
+    }
+}
+
+void SCSectionList::updateInstrAddress(vector<INSTRUCTION*> *instr_list)
+{
+    const char *sec_name[] = {
+        ".init",
+        ".text",
+        ".fini",
+        ".plt"
+    };
+
+    vector<INSTRUCTION*>::iterator it;
+    int last_sec, cur_sec, offset;
+    last_sec = -1;
+    offset = 0;
+    SCSection *sec;
+
+    for (it = instr_list->begin(); it != instr_list->end(); it++) {
+        cur_sec = (*it)->secType;
+        if (cur_sec != last_sec) {
+            switch(cur_sec) {
+                case SECTION_INIT:
+                    sec = this->getSectionByName(".init");
+                    break;
+                case SECTION_TEXT:
+                    sec = this->getSectionByName(".text");
+                    break;
+                case SECTION_FINI:
+                    sec = this->getSectionByName(".fini");
+                    break;
+                case SECTION_PLT:
+                    sec = this->getSectionByName(".plt");
+                    break;
+                default:
+                    cerr << "Can't handle instr sec type by now in update sec data" << endl;
+                    exit(0);
+            }
+            
+            last_sec = cur_sec;
+            offset = 0;
+        }
+        
+        
+        (*it)->address = sec->getSecAddress() + offset;
+        offset += (*it)->size;
+    }
+}

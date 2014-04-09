@@ -23,6 +23,7 @@
 #include "file.h"
 #include "symbol.h"
 #include "instr.h"
+#include "disasm.h"
 
 // Sections to be added
 #define INTERP_SECTION_NAME     ".interp"
@@ -176,6 +177,10 @@ class SCSection
         void
         setSecAddress(int address)
         { this->sec_address = address; }
+        
+        void
+        setSecData(UINT8 *)
+        { this->sec_data = NULL;}
         
         void
         setSecDatasize(int datasize)
@@ -344,11 +349,22 @@ class SCSectionList
         void
         addOneXSection(Elf32_Shdr *, char *name, char *data, int datasize);
         
+        /* the parameter is to decide whether skipping the rel sections when
+         * sort sections*/
         void
-        allocateSectionsAddress();
+        allocateSectionsAddress(int);
         
         void
         renewSectionsInfo(char *file[], int num);
+        
+        void
+        updateSectionSize(vector<INSTRUCTION*> *);
+        
+        void
+        updateSectionDataFromInstr(vector<INSTRUCTION*> *);
+        
+        void
+        updateInstrAddress(vector<INSTRUCTION*> *);
 
         void 
         testSectionList();
@@ -364,7 +380,7 @@ class SCSectionList
         createSections();
         
         void
-        sortSections();
+        sortSections(int);
 
         SCSection*
         addOneSection(Elf32_Shdr *, char *name, char *data, int datasize);

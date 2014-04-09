@@ -38,7 +38,8 @@ class SCRelocation
         SCRelocation(Elf32_Rel *rel) :
             rel_offset(rel->r_offset),
             rel_type(rel->r_info & 0xff),
-            rel_value(0) {}
+            rel_value(0),
+            rel_addend(0) {}
         
         UINT32
         getRelOffset()
@@ -59,6 +60,10 @@ class SCRelocation
         UINT32
         getRelValue()
         { return this->rel_value; }
+        
+        INT32 
+        getRelAddend()
+        { return this->rel_addend; }
 
         void
         setRelOffset(UINT32 offset)
@@ -80,12 +85,17 @@ class SCRelocation
         setRelValue(UINT32 value)
         { this->rel_value = value; }
         
+        void
+        setRelAddend(INT32 addend)
+        { this->rel_addend = addend; }
+        
     private:
         UINT32 rel_offset;
         UINT8  rel_type;
         SCSymbol *rel_sym;
         SCSection *rel_sec;
         UINT32 rel_value;
+        INT32 rel_addend;
         
         int
         getAddend();

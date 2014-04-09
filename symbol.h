@@ -136,8 +136,14 @@ class SCSymbol
         setSymbolNameOffset(int offset)
         { this->sym_name_offset = offset; }
         
+        /* set symbol value based first */
         void
         setSymbolValue(int addend);
+        
+        void
+        /* update symbol value in the upm */
+        updateSymbolValue(int value)
+        { this->sym_value = value; }
         
         void
         setSymbolSec(SCSection *sec)
@@ -180,6 +186,7 @@ class SCSymbol
         SCSymbol& operator=(const SCSymbol&);
         
         UINT32 sym_name_offset;
+        /* value is the offset or address of the symbol in the section*/
         UINT32 sym_value;
         UINT32 sym_size;
         UINT8  sym_type;
@@ -255,6 +262,10 @@ class SCSymbolListREL
         
         SCSymbol*
         getSymbolByIndex(int);
+        
+        vector<SCSymbol*>*
+        getSymbolList()
+        { return &(this->sym_list); }
         
         void
         updateSymbolValue(SCSectionList *);
