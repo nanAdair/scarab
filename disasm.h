@@ -34,6 +34,7 @@ private:
     void addImmediate(char *str,Operand *operand, INT8 size, bool noRegister, INT8 type, bool fixedSize, bool isAbsolute);
     void addRetCode();
     INT8 validatePrefix();
+    void setHandlerIndex();
 };
 
 char *int2str(void *num, unsigned long size, int fixedSize, int extend);

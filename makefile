@@ -1,5 +1,5 @@
-main: main.o section.o file.o symbol.o version.o relocation.o disasm.o dis-table.o
-	g++ -o main main.o section.o file.o symbol.o version.o relocation.o disasm.o dis-table.o
+main: main.o section.o file.o symbol.o version.o relocation.o disasm.o dis-table.o upm.o
+	g++ -o main main.o section.o file.o symbol.o version.o relocation.o disasm.o dis-table.o upm.o
 main.o: main.cc
 	g++ -c main.cc
 file.o: file.cc file.h
@@ -16,5 +16,7 @@ disasm.o: disasm.cpp disasm.h dis-table.h dis.h
 	g++ -c disasm.cpp
 dis-table.o: dis-table.cpp dis-table.h dis.h
 	g++ -c dis-table.cpp
+upm.o: upm.h upm.cc
+	g++ -c upm.cc
 clean:
 	rm -rf main *.o *~

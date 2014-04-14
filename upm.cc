@@ -23,6 +23,7 @@
 
 bool PatchInstrtoInstr32::apply()
 {
+    //cout << "1" << endl;
     int old_value, new_value;
     old_value = *(int *)(this->dest_instr->binary + this->dest_offset);
     
@@ -39,6 +40,7 @@ bool PatchInstrtoInstr32::apply()
 
 bool PatchInstrtoInstrPC32::apply()
 {
+    //cout << "2" << endl;
     int old_value, new_value;
     old_value = *(int *)(this->dest_instr->binary + this->dest_offset);
     
@@ -57,6 +59,7 @@ bool PatchInstrtoInstrPC32::apply()
 
 bool PatchSectiontoInstr32::apply()
 {
+    //cout << "3" << endl;
     int old_value, new_value;
     old_value = *(int *)(this->dest_instr->binary + dest_offset);
     
@@ -73,6 +76,7 @@ bool PatchSectiontoInstr32::apply()
 
 bool PatchSectiontoInstrPC32::apply()
 {
+    //cout << "4" << endl;
     int old_value, new_value;
     old_value = *(int *)(this->dest_instr->binary + dest_offset);
     
@@ -89,6 +93,7 @@ bool PatchSectiontoInstrPC32::apply()
 
 bool PatchSectiontoSection32::apply()
 {
+    //cout << "5" << endl;
     int old_value, new_value;
     old_value = *(int *)(this->dest_sec->getSecData() + this->dest_offset);
     
@@ -104,6 +109,7 @@ bool PatchSectiontoSection32::apply()
 
 bool PatchSectiontoSectionPC32::apply()
 {
+    //cout << "6" << endl;
     int old_value, new_value;
     old_value = *(int *)(this->dest_sec->getSecData() + this->dest_offset);
     
@@ -119,6 +125,7 @@ bool PatchSectiontoSectionPC32::apply()
 
 bool PatchSecSectoInstr32::apply()
 {
+    //cout << "7" << endl;
     int old_value, new_value;
     old_value = *(int *)(this->dest_instr->binary + dest_offset);
 
@@ -255,7 +262,6 @@ int SCPatchList::apply()
     }
     
     return change;
-    //cout << change << endl;
 }
 
 INSTRUCTION *SCPatchList::backtraceInstr(vector<INSTRUCTION*> *instr_list, UINT32 address)

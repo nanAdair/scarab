@@ -14,47 +14,6 @@ const char *XMMRegister[] = {"xmm0", "xmm1", "xmm2", "xmm3", "xmm4", "xmm5", "xm
 const char *MMRegister[] = {"mm0", "mm1", "mm2", "mm3", "mm4", "mm5", "mm6", "mm7"};
 const char *PTR[] = {"word ptr ", "dword ptr ", "word ptr ", "byte ptr "};
 
-char *int2str(void *num, unsigned long size, int fixedSize, int extend){
-    int i = 0, j = 0;
-    char result_reverse[10];
-    unsigned long temp = *((unsigned long*)num);
-    char *result = (char *)malloc(10);
-    strcpy(result, "\0");
-
-    for (; i < int(size * 2); i++){
-	if ((temp % 16) >= 10)
-	    result_reverse[size * 2 - i - 1] = (temp % 16) - 10 + 'A';
-	else
-	    result_reverse[size * 2 - i - 1] = (temp % 16) + '0';
-	temp /= 16;
-    }
-    result_reverse[i] = '\0';
-    while(1){
-	if (result_reverse[0] != '0')
-	    break;
-	for (j = 0; j < (int)strlen(result_reverse); j++)
-	    result_reverse[j] = result_reverse[j + 1];
-    }
-
-    if (fixedSize){
-	memset(result, '0', size * 2 - strlen(result_reverse));
-	result[size * 2 - strlen(result_reverse)] = '\0';
-	strcat(result, result_reverse);
-    }
-    else{
-	if (!extend && result_reverse[0] > '9')
-	    strcpy(result, "0");
-	strcat(result, result_reverse);
-    }
-    if (extend){
-	memset(result, 'F', 8 - strlen(result_reverse));
-	result[8 - strlen(result_reverse)] = '\0';
-	strcat(result, result_reverse);
-    }
-
-    return result;
-}
-
 Disasm::Disasm()
 {
     currentByte = 0;
@@ -842,8 +801,7 @@ INT8 Disasm::decodeModRM(Operand *operand, INT8 operand_number)
 
 INT8 Disasm::getImmediateOrDisplacement(Operand *operand, INT8 type, INT8 size)
 {
-    int s = 0, i = 1;
-    INT32 immediate, temp;
+    INT32 immediate = 0, s = 0;
 
     if (size == SIZE_BYTE || size == RELATIVE_ADDRESS_SHORT){
         if (codeSize == currentByte)
@@ -861,16 +819,9 @@ INT8 Disasm::getImmediateOrDisplacement(Operand *operand, INT8 type, INT8 size)
         s = 32;
     }
 
-    immediate = machineCode[currentByte++];
-    if (immediate < 0)
-        immediate &= 0x800000ff;
-    for (; i < s / 8; i++){
-        temp = (unsigned char)machineCode[currentByte++];
-        temp = (temp << (8 * i));
-        if (i == 3)
-            immediate &= 0x00ffffff;
-        immediate += temp;
-    }
+    memcpy(&immediate, &machineCode[currentByte], s / 8);
+    currentByte += s / 8;
+    
     if (type == IS_IMMEDIATE || type == IS_OFFSET)
         operand->operand = immediate;
     else if (type == IS_DISPLACEMENT){
@@ -880,8 +831,8 @@ INT8 Disasm::getImmediateOrDisplacement(Operand *operand, INT8 type, INT8 size)
     else if (type == IS_NEW_CS)
         instruction->new_cs = immediate;
     else{
+	operand->operand = immediate;
         instruction->new_eip = immediate;
-        operand->operand = immediate;
     }
 
     return ADD_SUCCESS;
@@ -927,7 +878,7 @@ void Disasm::addRetCode()
         strcat(ret_machineCode, int2str(&machineCode[i], sizeof(INT8), 1, 0));
         strcat(ret_machineCode, " ");
     }
-
+    
     INT8 *binary = (INT8*)malloc(currentByte);
     memcpy(binary, machineCode, currentByte);
     instruction->binary = binary;
@@ -954,7 +905,11 @@ void Disasm::addImmediate(char *str, Operand *operand, INT8 size, bool noRegiste
     else if (type == IS_NEW_CS)
         immediate = instruction->new_cs;
 
-    if (immediate < 0){
+    bool minus = false;
+    if ((s == 8 && immediate & 0x00000080) || (s == 16 && immediate & 0x00008000) || (s == 32 && immediate & 0x80000000))
+	minus = true;
+    
+    if (minus){
         if (type == IS_IMMEDIATE){
             if (!isAbsolute && needToChangeSign(operand, s, IS_IMMEDIATE)){
                 strcat(str, "-");
@@ -1193,6 +1148,25 @@ void Disasm::copyInstruction(INSTRUCTION *instr)
     free(instruction);
 }
 
+void Disasm::setHandlerIndex(){
+    if (!instruction->dest){
+	instruction->handlerIndex = HANDLER_32;
+	return;
+    }
+
+    switch(instruction->dest->operand_size){
+    case SIZE_BYTE: case RELATIVE_ADDRESS_SHORT:
+	instruction->handlerIndex = HANDLER_8;
+	break;
+    case SIZE_WORD: case ADDRESS_FAR_ABSOLUTE_WORD: case RELATIVE_ADDRESS_FAR_WORD:
+	instruction->handlerIndex = HANDLER_16;
+	break;
+    default:
+	instruction->handlerIndex = HANDLER_32;
+	break;
+    }
+}
+
 INT32 Disasm::disassembler(INT8 MACHINECODE[], int CODESIZE, INT32 addr, INT32 baseAddress, INSTRUCTION *instr)
 {
     if (CODESIZE == 0)
@@ -1312,10 +1286,51 @@ INT32 Disasm::disassembler(INT8 MACHINECODE[], int CODESIZE, INT32 addr, INT32 b
     if (decodeModRM(instruction->src3, FOURTH_OPERAND) == NOT_ENOUGH_CODE)
         return NOT_ENOUGH_CODE;
 
-    if (instruction->dest)
-	instruction->operandSize = instruction->dest->operand_size;
+    setHandlerIndex();
 
     copyAssembleAndMachineCode(NOT_ONLY_PREFIX);
     copyInstruction(instr);
     return currentByte;
 }
+
+char *int2str(void *num, unsigned long size, int fixedSize, int extend){
+    int i = 0, j = 0;
+    char result_reverse[10];
+    unsigned long temp = *((unsigned long*)num);
+    char *result = (char *)malloc(10);
+    strcpy(result, "\0");
+    
+    for (; i < int(size * 2); i++){
+	if ((temp % 16) >= 10)
+	    result_reverse[size * 2 - i - 1] = (temp % 16) - 10 + 'A';
+	else
+	    result_reverse[size * 2 - i - 1] = (temp % 16) + '0';
+	temp /= 16;
+    }
+    result_reverse[i] = '\0';
+    while(1){
+	if (result_reverse[0] != '0')
+	    break;
+	for (j = 0; j < (int)strlen(result_reverse); j++)
+	    result_reverse[j] = result_reverse[j + 1];
+    }
+
+    if (fixedSize){
+	memset(result, '0', size * 2 - strlen(result_reverse));
+	result[size * 2 - strlen(result_reverse)] = '\0';
+	strcat(result, result_reverse);
+    }
+    else{
+	if (!extend && result_reverse[0] > '9')
+	    strcpy(result, "0");
+	strcat(result, result_reverse);
+    }
+    if (extend){
+	memset(result, 'F', 8 - strlen(result_reverse));
+	result[8 - strlen(result_reverse)] = '\0';
+	strcat(result, result_reverse);
+    }
+    
+    return result;
+}
+

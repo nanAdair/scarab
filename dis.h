@@ -5,9 +5,16 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <vector>
 #include "type.h"
 
 #define MAX_INSTRUCTION_SIZE sizeof(INSTRUCTION)
+
+enum {
+    HANDLER_8,
+    HANDLER_16,
+    HANDLER_32
+};
 
 /* prefix */
 #define PREFIX_LOCK                 0xf0
@@ -247,7 +254,10 @@ typedef struct _Operand{
     bool isDefault;
 } Operand;
 
-typedef struct _INSTRUCTION{
+//typedef struct _INSTRUCTION{
+class INSTRUCTION 
+{
+    public:
     /* prefixes */
     INT8 lockAndRepeat;
     INT8 segmentOverride;
@@ -294,9 +304,25 @@ typedef struct _INSTRUCTION{
     /* size */
     INT32 size;
     /* operand size */
-    int operandSize;
+    int handlerIndex;
     /* binary */
     INT8 *binary;
-} INSTRUCTION;
+    /* next instruction */
+    INSTRUCTION *next;
+    //struct _INSTRUCTION *next;
+};
 
+class SCInstrList 
+{
+    public:
+        SCInstrList() {}
+        ~SCInstrList() {}
+
+        vector<INSTRUCTION*> *
+        getInstrList()
+        { return &(this->p_instrs); }
+
+    private:
+        vector<INSTRUCTION*> p_instrs;
+};
 #endif
