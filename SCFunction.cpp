@@ -15,9 +15,12 @@
  *
  * =====================================================================================
  */
+
+#include "SCFunction.h"
 #include <stdlib.h>
-#include "SCBlock.h"
+
 #include "SCInstr.h"
+#include "SCBlock.h"
 
 SCFunction::SCFunction() {
     this->f_flags = FUNCTION_INVALID;

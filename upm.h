@@ -24,6 +24,8 @@
 
 #include "relocation.h"
 #include "disasm.h"
+#include "SCInstr.h"
+#include "type.h"
 
 class SCRelocation;
 class SCSection;
@@ -283,8 +285,8 @@ class PatchInstrtoSymbol32 : public SCPatch
 class SCPatchList
 {
     public:
-        void initUPMRel(SCSectionList *, SCRelocationList *, vector<INSTRUCTION*> *);
-        void initUPMSym(SCSectionList *, SCSymbolListREL *, vector<INSTRUCTION*> *);
+        void initUPMRel(SCSectionList *, SCRelocationList *, InstrListT*);
+        void initUPMSym(SCSectionList *, SCSymbolListREL *, InstrListT*);
         void testPatchList();
 
         int apply();
@@ -292,7 +294,7 @@ class SCPatchList
     private:
         vector<SCPatch*> p_list;
         
-        INSTRUCTION *backtraceInstr(vector<INSTRUCTION*> *, UINT32 );
+        INSTRUCTION *backtraceInstr(InstrListT*, UINT32 );
         SCSection *backtraceSec(SCSectionList *, UINT32);
 };
     

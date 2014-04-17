@@ -26,17 +26,16 @@
 #include "file.h"
 #include "disasm.h"
 #include "upm.h"
+#include "SCInstr.h"
+#include "SCBlock.h"
 
 void binaryAbstraction(SCSectionList *, SCSymbolListREL *, SCRelocationList *, char *[]);
 void patchSecContent(SCSectionList *sl, SCSymbolListREL *sym_list, char *argv[]);
-//void disassembleExecutableSection(vector<INSTRUCTION*> *instr_list, SCSectionList *obj_sec_list);
-void disassembleExecutableSection(SCInstrList *instr_list, SCSectionList *obj_sec_list);
-SCPatchList *initUpm(SCSectionList *, SCRelocationList *, vector<INSTRUCTION*> *);
-//void finalizeMemory(SCSectionList *, vector<INSTRUCTION*> *, SCPatchList *);
-//void obfModify(vector<INSTRUCTION*> *);
-INSTRUCTION *obfModify(vector<INSTRUCTION*> *);
-void finalizeMemory(SCSectionList *, vector<INSTRUCTION*> *, SCPatchList *, INSTRUCTION *);
-void obfPatch(vector<INSTRUCTION*> *instr_list, INSTRUCTION *dumpInstr);
+void disassembleExecutableSection(SCSectionList *obj_sec_list);
+SCPatchList *initUpm(SCSectionList *, SCRelocationList *, InstrListT*);
+INSTRUCTION *obfModify(InstrListT* instr_list);
+void finalizeMemory(SCSectionList *,  InstrListT* , SCPatchList *, INSTRUCTION *);
+void obfPatch(InstrListT* , INSTRUCTION *dumpInstr);
 
 int main(int argc, char *argv[])
 {
@@ -45,24 +44,20 @@ int main(int argc, char *argv[])
     SCRelocationList *rel_list = new SCRelocationList();
     
     binaryAbstraction(obj_sec_list, sym_list, rel_list, argv);
-    
-    SCInstrList *instrList = new SCInstrList();
 
-    disassembleExecutableSection(instrList, obj_sec_list);
+    disassembleExecutableSection(obj_sec_list);
     
-    vector<INSTRUCTION*> *instr_list;
-    instr_list = instrList->getInstrList();
+    InstrListT instr_list;
     SCPatchList *patch_list;
-    patch_list = initUpm(obj_sec_list, rel_list, instr_list);
-    //patch_list = initUpm(obj_sec_list, rel_list, &instr_list);
+    patch_list = initUpm(obj_sec_list, rel_list, &instr_list);
     
     INSTRUCTION *dumpInstr;
-    dumpInstr = obfModify(instr_list);
-    //dumpInstr = obfModify(&instr_list);
+    dumpInstr = obfModify(&instr_list);
     
-    finalizeMemory(obj_sec_list, instr_list, patch_list, dumpInstr);
-    //finalizeMemory(obj_sec_list, &instr_list, patch_list, dumpInstr);
+    finalizeMemory(obj_sec_list, &instr_list, patch_list, dumpInstr);
     patchSecContent(obj_sec_list, sym_list, argv);
+
+    SCInstrList::sharedInstrList()->setInstrList(instr_list);
     
     SCFileEXEC *exec = new SCFileEXEC();
     exec->prepare(obj_sec_list);
@@ -88,7 +83,7 @@ int main(int argc, char *argv[])
     //sec->testSecData();
 }
 
-SCPatchList *initUpm(SCSectionList *sl, SCRelocationList *rel_list, vector<INSTRUCTION*> *instr_list)
+SCPatchList *initUpm(SCSectionList *sl, SCRelocationList *rel_list, InstrListT* instr_list)
 {
     SCPatchList *patch_list = new SCPatchList();
     patch_list->initUPMRel(sl, rel_list, instr_list);
@@ -96,9 +91,9 @@ SCPatchList *initUpm(SCSectionList *sl, SCRelocationList *rel_list, vector<INSTR
     return patch_list;
 }
 
-INSTRUCTION *obfModify(vector<INSTRUCTION*> *instr_list)
+INSTRUCTION *obfModify(InstrListT* instr_list)
 {
-    vector<INSTRUCTION*>::iterator it;
+    InstrIterT it;
     
     INSTRUCTION *dumpInstr = (INSTRUCTION *)malloc(sizeof(INSTRUCTION));
     dumpInstr->size = 1;
@@ -114,15 +109,15 @@ INSTRUCTION *obfModify(vector<INSTRUCTION*> *instr_list)
     
     //cout << hex << (*it)->address << endl;
     dumpInstr->secType = (*it)->secType;
-    instr_list->insert(it+1, dumpInstr);
+    instr_list->insert(++it, dumpInstr);
     
     return dumpInstr;
 }
 
 /* some odd code, cause there is no cfg information */
-void obfPatch(vector<INSTRUCTION*> *instr_list, INSTRUCTION *dumpInstr)
+void obfPatch(InstrListT* instr_list, INSTRUCTION *dumpInstr)
 {
-    vector<INSTRUCTION*>::iterator it;
+    InstrIterT it;
     for (it = instr_list->begin(); it != instr_list->end(); ++it) {
         /* offset -= 1 */
         if (((*it)->instr_class == CLASS_JE || (*it)->instr_class == CLASS_JMP) && (*it)->address < dumpInstr->address && (*it)->final_address >= dumpInstr->address) {
@@ -144,7 +139,7 @@ void obfPatch(vector<INSTRUCTION*> *instr_list, INSTRUCTION *dumpInstr)
     }
 }
 
-void finalizeMemory(SCSectionList *sl, vector<INSTRUCTION*> *instr_list, SCPatchList *patch_list, INSTRUCTION *dumpInstr)
+void finalizeMemory(SCSectionList *sl, InstrListT* instr_list, SCPatchList *patch_list, SCInstr *dumpInstr)
 {
     int change = 0;
     
@@ -230,7 +225,7 @@ void patchSecContent(SCSectionList *sl, SCSymbolListREL *sym_list, char *argv[])
 }
 
 //void disassembleExecutableSection(vector<INSTRUCTION*> *instr_list, SCSectionList *obj_sec_list)
-void disassembleExecutableSection(SCInstrList *instr_list, SCSectionList *obj_sec_list)
+void disassembleExecutableSection(SCSectionList *obj_sec_list)
 {
     vector<SCSection*> *sect = obj_sec_list->getSectionList();
     UINT8 buffer[MAX_INSTRUCTION_SIZE + 1];
@@ -268,7 +263,7 @@ void disassembleExecutableSection(SCInstrList *instr_list, SCSectionList *obj_se
 		else
 		    instr->secType = SECTION_OTHER;
 
-		(instr_list->getInstrList())->push_back(instr);
+		(SCInstrList::sharedInstrList()->getInstrList()).push_back(instr);
 
 		address += ret;
 		start += ret;

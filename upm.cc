@@ -139,7 +139,7 @@ bool PatchSecSectoInstr32::apply()
     return false;
 }
 
-void SCPatchList::initUPMRel(SCSectionList *sl, SCRelocationList *rel_list, vector<INSTRUCTION*> *instr_list)
+void SCPatchList::initUPMRel(SCSectionList *sl, SCRelocationList *rel_list, InstrListT* instr_list)
 {
     vector<SCRelocation*>::iterator it;
     int i = 0;
@@ -244,7 +244,7 @@ void SCPatchList::initUPMRel(SCSectionList *sl, SCRelocationList *rel_list, vect
     //cout << "sum is: " << i << endl;
 }
 
-void SCPatchList::initUPMSym(SCSectionList *sl, SCSymbolListREL *sym_list, vector<INSTRUCTION*> *instr_list)
+void SCPatchList::initUPMSym(SCSectionList *sl, SCSymbolListREL *sym_list, InstrListT* instr_list)
 {
     vector<SCSymbol*>::iterator it;
     for (it = sym_list->getSymbolList()->begin(); it != sym_list->getSymbolList()->end(); ++it) {
@@ -264,12 +264,13 @@ int SCPatchList::apply()
     return change;
 }
 
-INSTRUCTION *SCPatchList::backtraceInstr(vector<INSTRUCTION*> *instr_list, UINT32 address)
+INSTRUCTION* SCPatchList::backtraceInstr(InstrListT* instr_list, UINT32 address)
 {
-    vector<INSTRUCTION*>::iterator it;
+    InstrIterT it;
+    InstrRIterT rit;
     
-    it = instr_list->end() - 1;
-    if ((*it)->address < address)
+    rit = instr_list->rbegin();
+    if ((*rit)->address < address)
         return NULL;
     
     for (it = instr_list->begin(); it != instr_list->end(); ++it) {

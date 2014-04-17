@@ -18,11 +18,60 @@
 #include "SCInstr.h"
 #include <algorithm>
 
-void SCInstr::setFlag(UINT64 flag) {
+#include "SCFunction.h"
+#include "SCBlock.h"
+#include "operand.h"
+
+ SCInstr::SCInstr() {
+
+ }
+
+ SCInstr::SCInstr(SCINSTR_INTERNAL_STRUCT tmp) {
+
+    i_flags = 0;
+    i_block = NULL;
+    
+    this->lockAndRepeat = tmp.lockAndRepeat;
+    this->segmentOverride = tmp.segmentOverride;
+    this->OperandSizeOverride = tmp.OperandSizeOverride;
+    this->AddressSizeOverride = tmp.AddressSizeOverride;
+
+    this->dest = tmp.dest;
+    this->src1 = tmp.src1;
+    this->src2 = tmp.src2;
+    this->src3 = tmp.src3;
+
+    this->mod = tmp.mod;
+    this->rm = tmp.rm;
+    this->regop = tmp.regop;
+
+    this->address = tmp.address;
+    this->final_address = tmp.final_address;
+
+    this->type = tmp.type;
+    this->instr_class = tmp.instr_class;
+    this->pwd_affected = tmp.pwd_affected;
+    this->pwd_used = tmp.pwd_used;
+    this->opcode = tmp.opcode;
+    this->ModRM = tmp.ModRM;
+    this->SIB = tmp.SIB;
+    this->assembly = tmp.assembly;
+    this->ret_machineCode = tmp.ret_machineCode;
+    this->mnemonic = tmp.mnemonic;
+
+    this->new_cs = tmp.new_cs;
+    this->new_eip = tmp.new_eip;
+    this->size = tmp.size;
+    this->handlerIndex = tmp.handlerIndex;
+    this->binary = tmp.binary;
+    this->next = tmp.next;
+ }
+
+void SCInstr::setFlag(IFLAG flag) {
     (this->i_flags) |= flag;
 }
 
-void SCInstr::removeFlag(UINT64 flag) {
+void SCInstr::removeFlag(IFLAG flag) {
     (this->i_flags) &= (~flag);
 }
 
@@ -30,7 +79,7 @@ void SCInstr::setBlock(SCBlock* bbl) {
     this->i_block = bbl;
 }
 
-bool SCInstr::hasFlag() {
+bool SCInstr::hasFlag(IFLAG flag) {
     return (bool)((this->i_flags) & flag);
 }
 
@@ -41,107 +90,95 @@ SCBlock* SCInstr::getBlock() {
 
 // ==== methods ====
 bool SCInstr::isPCChangingClass() {
-    checkFlags();
-    return hasFlag(INSTR_CLASS_PC_CHANGING);
+    return (type == FLOW_INSTRUCTION);
 }
 
 bool SCInstr::isCallClass() {
-    checkFlags();
-    return hasFlag(INSTR_CLASS_CALL);
+    return (instr_class==CLASS_CALLF || instr_class==CLASS_CALL);
 }
 
 bool SCInstr::isReturnClass() {
-    checkFlags();
-    return hasFlag(INSTR_CLASS_RETURN);
+    return (instr_class==CLASS_RETN || instr_class==CLASS_RETF);
 }
 
 bool SCInstr::isHaltClass() {
-    checkFlags();
-    return hasFlag(INSTR_CLASS_HALT);
+    // TODO:
+    return false;
 }
 
 bool SCInstr::isJumpClass() {
-    checkFlags();
-    return hasFlag(INSTR_CLASS_JUMP);
+    // TODO:
+    return false;
 }
 
 bool SCInstr::isAddClass() {
-    checkFlags();
-    return hasFlag(INSTR_CLASS_ADD);
+    return (instr_class == CLASS_ADD);
 }
 
 bool SCInstr::isAndClass() {
-    checkFlags();
-    return (this->i_class == CLASS_AND) ? true : false;
+    return (instr_class == CLASS_AND);
 }
 
 bool SCInstr::isBranchClass() {
-    checkFlags();
-    return hasFlag(INSTR_CLASS_BRANCH);
+    // TODO:
+    return false;
 }
 
 bool SCInstr::isFPClass() {
-    checkFlags();
-    return hasFlag(INSTR_CLASS_FLOAT);
+    return (type == FLOAT_INSTRUCTION);
 }
 
 bool SCInstr::isLeaClass() {
-    checkFlags();
-    return hasFlag(INSTR_CLASS_LEA);
+    return (instr_class == CLASS_LEA);
 }
 
 bool SCInstr::isLeaveClass() {
-    checkFlags();
-    return hasFlag(INSTR_CLASS_LEAVE);
+    return (instr_class == CLASS_LEAVE);
 }
 
 bool SCInstr::isLoopClass() {
-    checkFlags();
-    return hasFlag(INSTR_CLASS_LOOP);
+    //TODO
+    return false;
 }
 
 bool SCInstr::isMovClass() {
-    checkFlags();
-    return hasFlag(INSTR_CLASS_MOV);
+    return (instr_class == CLASS_MOV);
 }
 
 bool SCInstr::isNOPClass() {
-    checkFlags();
-    return hasFlag(INSTR_CLASS_NOP);
+    return (instr_class == CLASS_NOP);
 }
 
 bool SCInstr::isOPDIRClass() {
-    checkFlags();
-    return hasFlag(INSTR_CLASS_OPDIR);
+    // TODO:
+    return false;
 }
 
 bool SCInstr::isOPOFFClass() {
-    checkFlags();
-    return hasFlag(INSTR_CLASS_OPOFF);
+    // TODO:
+    return false;
 }
 
 bool SCInstr::isPopClass() {
-    checkFlags();
-    return hasFlag(INSTR_CLASS_POP);
+    return (instr_class == CLASS_POP);
 }
 
 bool SCInstr::isPushClass() {
-    checkFlags();
-    return hasFlag(INSTR_CLASS_PUSH);
+    return (instr_class == CLASS_PUSH);
 }
 
 bool SCInstr::isSubClass() {
-    checkFlags();
-    return hasFlag(INSTR_CLASS_SUB);
+    return (instr_class == CLASS_SUB);
 }
 
 bool SCInstr::isSyscallClass() {
-    checkFlags();
-    return hasFlag(INSTR_CLASS_SYSCALL);
+    // TODO:
+    return false;
 }
 
 bool SCInstr::isDataInstruction() {
-    return hasFlag(INSTR_DATA_BYTE);
+    // currently no data instr
+    return false;
 }
 
 bool SCInstr::isConditionalInstr() {
@@ -157,18 +194,6 @@ bool SCInstr::isOnlyInstrInBBL() {
     return true;
 }
 
-// ==== internal ====
-void SCInstr::checkFlags() {
-    if (!hasFlag(INSTR_HAS_CLASS_FLAGS)) {
-        insertSetClassFlags();
-    }
-}
-
-void SCInstr::insertSetClassFlags() {
-    // TODO: transplant InstrSetClassFlags in sysdep.c
-    // wait for zzb
-}
-
 
 // ==== SCInstrList ====
 static SCInstrList* _sharedInstrList = NULL;
@@ -182,6 +207,14 @@ SCInstrList* SCInstrList::sharedInstrList() {
         _sharedInstrList = new SCInstrList();
     }
     return _sharedInstrList;
+}
+
+InstrListT SCInstr::getInstrList() {
+    return this->p_instrs;
+}
+
+void SCInstr::setInstrList(InstrListT &ins) {
+    (this->p_instrs).assign(ins.begin(), ins.end());
 }
 
 void SCInstr::funResolveExitBlock() {
@@ -205,11 +238,73 @@ void SCInstr::funResolveExitBlock() {
 
 void SCInstrList::resolveTargets() {
     for(InstrIterT it=p_instrs.begin(); it!=p_instrs.end(); ++it) {
+        // 数据指令所在bbl的做法：
+        // 1. 加一条从entry指向这个bbl的边
+        // 2. 这个bbl指向HELL的边
+        // 3. HELL指向bbl下一个块的边
+        // 4. 这个bbl连接下一个bbl的边
         if ((*it)->isDataInstruction()) {
             INSTR_FUNCTION(*it)->setFlag(FUNCTION_DATA_INSTRUCTION_FLAG);
             if ((*it) != (*it)->getBlock()->getFirst()) {
-
+                BLOCKLIST->divideBBLByInstr((*it)->getBlock(), *it)
             }
+            // represents data in the text section
+            (*it)->getBlock()->setType(BT_DATABLOCK);
+
+            // the first bbl in a function
+            if ((*it)->getBlock()==INSTR_FUNCTION(*it)->getFirst()) {
+                (*it)->getBlock()->addEntryEdge();
+            }
+
+            if ((*it)->getNextInstr()!=NULL) {
+                (*it)->getBlock()->addEdgeToHELL(ET_HELL);
+                (*it)->getNextInstr()->getBlock()->addEdgeFromHELL(ET_HELLMAYBE);
+                EDGELIST->addBBLEdge((*it)->getBlock(), (*it)->getNextInstr()->getBlock(), ET_DATALINK);
+                Report(RP_TRIVIAL, "Added Hell edge for data function %s\n", (*it)->getBlock()->getFunction()->getName());
+            }
+            else {
+                Report(RP_TRIVIAL, "Data instruction has no successor\n");
+            }
+            continue;
+        }
+
+        if (!((*it)->isPCChangingClass())) {
+            if ((*it)->hasFlag(BBL_END) && !((*it)->getBlock()->SuccBBLExistOrNot(BLOCKLIST->getNextBBL((*it)->getBlock())))) {
+                if (BLOCKLIST->getNextBBL((*it)->getBlock()) == NULL) {
+                    // last bbl in the program
+                    (*it)->getBlock()->addEdgeToHELL(ET_HELL);
+                }
+                else {
+                    (*it)->getBlock()->addEdgeToBBL(BLOCKLIST->getNextBBL((*it)->getBlock()), ET_NORMAL);
+                   
+                    if (INSTR_FUNCTION(*it)!=INSTR_FUNCTION(INSTRLIST->getNextInstr(*it))) {
+                        INSTR_FUNCTION(*it)->getExitBlock()->addBBLEdge(INSTR_FUNCTION(INSTRLIST->getNextInstr(*it))->getExitBlock(), ET_COMPENSATE);
+                    }
+                }
+            }
+            (*it)->getBlock()->setType(BT_NORMAL);
+            continue;
+        }
+
+        if ((*it)->isReturnClass()) {
+            (*it)->getBlock()->setType(BT_RETURN);
+            continue;
+        }
+
+        if ((*it)->isSyscallClass()) {
+
+            SCBlock* newbbl = NULL;
+            SCInstr* nextins = INSTRLIST->getNextInstr(*it);
+            if ((*it) == ((*it)->getBlock()->getLastInstr())) {
+                newbbl = (*it)->getBlock();
+            }
+            else {
+                if (nextins != nextins->getBlock()->getFirstInstr()) {
+                BLOCKLIST->divideBBLByInstr((*it)->getBlock(), nextins);
+                }
+                newbbl = (*it)->getBlock();
+            }
+            newbbl->setType(BT_SYSCALL);
         }
     }
 }

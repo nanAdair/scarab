@@ -18,6 +18,11 @@
 #include "SCBlock.h"
 #include <algorithm>
 
+#include "SCInstr.h"
+#include "SCEdge.h"
+#include "SCFunction.h"
+
+
 SCBlock::SCBlock() {
     b_type = BT_INVALID;
     b_flags = 0;
@@ -26,24 +31,20 @@ SCBlock::SCBlock() {
     b_id = 0;   // TODO: global increase;
 }
 
-void SCBlock::setFlag(UINT64 flag) {
+void SCBlock::setFlag(BFLAG flag) {
     this->b_flags |= flag;
 }
 
-bool SCBlock::hasFlag(UINT64 flag) {
+bool SCBlock::hasFlag(BFLAG flag) {
     return (bool)((this->b_flags) & flag);
 }
 
-void SCBlock::removeFlag(UINT64 flag) {
+void SCBlock::removeFlag(BFLAG flag) {
     (this->b_flags) &= (~flag);
 }
 
-void SCBlock::setType(UINT16 type) {
+void SCBlock::setType(BTYPE type) {
     this->b_type = type;
-}
-
-void SCBlock::setWeight(EDGE_WEIGHT_TYPE weight) {
-    this->b_weight = weight;
 }
 
 void SCBlock::setFirstInstr(SCInstr* instr) {
@@ -66,16 +67,12 @@ void SCBlock::setFunction(SCFunction* fun) {
     this->b_fun = fun;
 }
 
-UINT64 getType() {
+BFLAG SCBlock::getFlag() {
     return this->b_flags;
 }
 
-UINT16 SCBlock::getType() {
+BTYPE SCBlock::getType() {
     return this->b_type;
-}
-
-EDGE_WEIGHT_TYPE SCBlock::getWeight() {
-    return this->b_weight;
 }
 
 SCInstr* SCBlock::getFirstInstr() {
@@ -103,12 +100,87 @@ void SCBlock::moveSuccEdgesToBBL(SCBlock* to) {
     this->b_succ.clear();
 }
 
+void SCBlock::addEntryEdge() {
+    SCBlock* firstBBL = getFunction()->getEntryBlock();
+    if (getEdgeFromBBL(firstBBL)!=NULL) {
+        INSTRLIST->addBBLEdge(firstBBL, this, ET_ENTRY);
+    }
+}
+
+SCEdge* SCBlock::getEdgeFromBBL(SCBlock* from) {
+    for(EdgeIterT it=from->getSucc().begin(); it!=(from->getSucc()).end(); ++it) {
+        if ((*it)->getTo() == this)
+            return (*it);
+    }
+    return NULL;
+}
+
+SCEdge* SCBlock::getEdgeToBBL(SCBlock* to) {
+    for(EdgeIterT it=(to->getPred()).begin(); it!=(to->getPred()).end(); ++it) {
+        if ((*it)->getFrom() == this)
+            return (*it);
+    }
+    return NULL;
+}
+
+void SCBlock::addEdgeToHELL(UINT8 type) {
+    // TODO: check if HELL==NULL
+    addEdgeToBBL(HELL, type);
+}
+
+void SCBlock::addEdgeFromHELL(UINT8 type) {
+    // TODO: check if HELL==NULL
+    addEdgeFromBBL(HELL, type);
+}
+
+void SCBlock::addEdgeToBBL(SCBlock* to, UINT8 type) {
+    EDGELIST->addBBLEdge(this, to, type);
+}
+void SCBlock::addEdgeFromBBL(SCBlock* from, UINT8 type) {
+    EDGELIST->addBBLEdge(from, this, type);
+}
+
+
+void SCBlock::removeAllEdges() {
+    for(it=b_pred.begin(); it!=b_pred.end(); ++it) {
+
+    }
+}
+
+bool SCBlock::succBBLExistOrNot(SCBlock* bbl) {
+    for(EdgeIterT it=getSucc().begin(); it!=getSucc().end(); ++it) {
+        if ((*it)->getTo() == bbl)
+            return true;
+    }
+    return false;
+}
+
+bool SCBlock::predBBLExistOrNot(SCBlock* bbl) {
+    for(EdgeIterT it=getPred().begin(); it!=getPred().end(); ++it) {
+        if ((*it)->getFrom() == bbl)
+            return true;
+    }
+    return false;
+}
+
 
 // ==== SCBlockList ====
 static SCBlockList* _sharedBlockList = NULL;
 
 SCBlockList::SCBlockList() {
     _sharedBlockList = this;
+   
+    // set up HELL block
+    if (HELL) {
+        HELL->removeAllEdges();
+        delete HELL;
+    }
+    HELL = new SCBlock();
+    SCFunction* hellfun = new SCFunction();
+    HELL->setFunction(hellfun);
+    hellfun->setFirstBlock(HELL);
+    hellfun->setLastBlock(HELL);
+    HELL->setType(BT_HELL);
 }
 
 SCBlockList* SCBlockList::sharedBlockList() {
@@ -121,6 +193,8 @@ SCBlockList* SCBlockList::sharedBlockList() {
 BlockListT SCBlockList::getBlockList() {
     return this->p_bbls;
 }
+
+
 
 void SCBlockList::createBBLList(SCInstrList instrList) {
     InstrIterT instrIter;
@@ -165,7 +239,7 @@ void SCBlockList::markBBL(SCInstrList instrList) {
     return;
 }
 
-void SCBlockList::devideBBLByInstr(SCBlock* bbl, SCInstr* ins) {
+void SCBlockList::divideBBLByInstr(SCBlock* bbl, SCInstr* ins) {
     
     if (ins->hasFlag(BBL_START)) {
         Report(RT_MAIN, "Attempt to devide BBL with an instruction that start a BBL\n");

@@ -161,7 +161,7 @@ class PatchSectiontoSectionPC32 : public PatchSectiontoSection
 class SCPatchList
 {
     public:
-        void init(SCRelocationList *, vector<INSTRUCTION*> *);
+        void init(SCRelocationList *, InstrListT*);
         void testPatchList();
         
     private:

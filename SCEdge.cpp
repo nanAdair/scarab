@@ -17,6 +17,8 @@
  */
 #include "SCEdge.h"
 
+#include "SCBlock.h"
+
 SCEdge::SCEdge() {
     this -> e_to = this -> e_from = NULL;
     this->e_flags = e_type = 0;
@@ -43,9 +45,7 @@ void SCEdge::setFrom(SCBlock* from) {
 void SCEdge::setType(UINT16 type) { 
     this->e_type = type;
 }
-void SCEdge::setWeight(EDGE_WEIGHT_TYPE weight) {
-    this->e_edgeWeight = weight;
-}
+
 
 SCBlock* SCEdge::getTo() {
     return this->e_to;
@@ -53,12 +53,10 @@ SCBlock* SCEdge::getTo() {
 SCBlock* SCEdge::getFrom() {
     return this->e_from;
 }
-UINT16 SCEdge::getType() {
+ETYPE SCEdge::getType() {
     return this->e_type;
 }
-EDGE_WEIGHT_TYPE SCEdge::getWeight() {
-    return this->e_edgeWeight;
-}
+
 
 // ==== SCEdgeList ====
 
@@ -88,6 +86,9 @@ SCEdge* SCEdgeList::addBBLEdge(SCBlock* from, SCBlock* to, UINT8 type) {
     return edge;
 }
 
+void removeBBLEdge(SCBlock* from, SCBlock* to, ETYPE type) {
+    SCEdge* edge = from->get;
+}
 void SCEdgeList::removeEdge(SCEdge* edge) {
     (this->p_edges).erase(edge);
 }

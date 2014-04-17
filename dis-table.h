@@ -1,9 +1,8 @@
 #ifndef DIS_TABLE_H
 #define DIS_TABLE_H
 
-#include "dis.h"
+#include "SCInstr.h"
 
-typedef struct _OPERAND OPERAND;
 
 enum HAVE_AUXILIARY_CODE{
     AUXILIARY_80, AUXILIARY_81, AUXILIARY_82, AUXILIARY_83,

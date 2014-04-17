@@ -1054,9 +1054,9 @@ void SCSectionList::testSectionList()
 }
 
 
-void SCSectionList::updateSectionSize(vector<INSTRUCTION*> *instr_list)
+void SCSectionList::updateSectionSize(InstrListT* instr_list)
 {
-    vector<INSTRUCTION*>::iterator it;
+    InstrIterT it;
     
     int datasize = 0;
     int last_sec, cur_sec;
@@ -1094,7 +1094,7 @@ void SCSectionList::updateSectionSize(vector<INSTRUCTION*> *instr_list)
     }
 }
 
-void SCSectionList::updateSectionDataFromInstr(vector<INSTRUCTION*> *instr_list)
+void SCSectionList::updateSectionDataFromInstr(InstrListT* instr_list)
 {
     const char *sec_name[] = {
         ".init",
@@ -1112,7 +1112,7 @@ void SCSectionList::updateSectionDataFromInstr(vector<INSTRUCTION*> *instr_list)
         sec->setSecDatasize(0);
     }
 
-    vector<INSTRUCTION*>::iterator it;
+    InstrIterT it;
     int last_sec, cur_sec;
     last_sec = -1;
     SCSection *sec;
@@ -1145,7 +1145,7 @@ void SCSectionList::updateSectionDataFromInstr(vector<INSTRUCTION*> *instr_list)
     }
 }
 
-void SCSectionList::updateInstrAddress(vector<INSTRUCTION*> *instr_list)
+void SCSectionList::updateInstrAddress(InstrListT* instr_list)
 {
     const char *sec_name[] = {
         ".init",
@@ -1154,7 +1154,7 @@ void SCSectionList::updateInstrAddress(vector<INSTRUCTION*> *instr_list)
         ".plt"
     };
 
-    vector<INSTRUCTION*>::iterator it;
+    InstrIterT it;
     int last_sec, cur_sec, offset;
     last_sec = -1;
     offset = 0;
