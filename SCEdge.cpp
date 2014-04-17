@@ -17,22 +17,26 @@
  */
 #include "SCEdge.h"
 
+#include <algorithm>
 #include "SCBlock.h"
 
 SCEdge::SCEdge() {
     this -> e_to = this -> e_from = NULL;
     this->e_flags = e_type = 0;
 }
-
-void SCEdge::setFlag(UINT16 flag) {
+SCEdge::~SCEdge() {
     
 }
 
-void SCEdge::removeFlag(UINT16 flag) {
+void SCEdge::setFlag(EFLAG flag) {
+    
+}
+
+void SCEdge::removeFlag(EFLAG flag) {
 
 }
 
-bool SCEdge::hasFlag(UINT16 flag) {
+bool SCEdge::hasFlag(EFLAG flag) {
 
 }
 
@@ -42,7 +46,7 @@ void SCEdge::setTo(SCBlock* to) {
 void SCEdge::setFrom(SCBlock* from) {
     this->e_from = from;
 }
-void SCEdge::setType(UINT16 type) { 
+void SCEdge::setType(ETYPE type) { 
     this->e_type = type;
 }
 
@@ -73,31 +77,53 @@ SCEdgeList::SCEdgeList() {
     _sharedEdgeList = this;
 }
 
-SCEdge* SCEdgeList::addBBLEdge(SCBlock* from, SCBlock* to, UINT8 type) {
+SCEdge* SCEdgeList::addBBLEdge(SCBlock* from, SCBlock* to, ETYPE type) {
     SCEdge *edge = new SCEdge();
-    edge->e_to = to;
-    edge->e_from = from;
-    edge->e_type = type;
+    edge->setTo(to);
+    edge->setFrom(from);
+    edge->setType(type);
 
     (this->p_edges).push_back(edge);
-    from->addToEdge(edge);
-    to->addFromEdge(edge);
+    from->addSuccEdge(edge);
+    to->addPredEdge(edge);
 
     return edge;
 }
 
-void removeBBLEdge(SCBlock* from, SCBlock* to, ETYPE type) {
-    SCEdge* edge = from->get;
+void SCEdgeList::removeBBLEdge(SCBlock* from, SCBlock* to, ETYPE type) {
+    SCEdge* edge = getBBLEdge(from, to, type);
+    if (edge != NULL) {
+        from->removeSuccEdge(edge);
+        to->removePredEdge(edge);
+        removeEdge(edge);
+        delete edge;
+    }
 }
 void SCEdgeList::removeEdge(SCEdge* edge) {
-    (this->p_edges).erase(edge);
+    EdgeIterT it = std::find(p_edges.begin(), p_edges.end(), edge);
+    if (it!=p_edges.end()) {
+        p_edges.erase(it);
+    }
 }
 
 bool SCEdgeList::edgeExistOrNot(SCEdge* edge) {
-    for(EdgeIterT* it=p_edges.begin(); it!=p_edges.end(); ++it) {
-        if (*it == edge)
-            return true;
-    }
+
+    EdgeIterT it = std::find(p_edges.begin(), p_edges.end(), edge);
+    return (it==p_edges.end())?false:true;
+}
+
+bool SCEdgeList::edgeExistOrNot(SCBlock* from, SCBlock*to, ETYPE type) {
+    if(getBBLEdge(from, to, type) != NULL)
+        return true;
     return false;
+}
+
+SCEdge* SCEdgeList::getBBLEdge(SCBlock* from, SCBlock* to, ETYPE type) {
+    for(EdgeIterT it=(from->getSucc()).begin(); it!=(from->getSucc()).end(); ++it) {
+        if (((*it)->getFrom()==from) && ((*it)->getTo()==to) && 
+            ((*it)->getType()== type))
+            return *it;
+    }
+    return NULL;
 }
 

@@ -1,5 +1,5 @@
-main: main.o section.o file.o symbol.o version.o relocation.o disasm.o dis-table.o upm.o instruction.o block.o function.o edge.o 
-	g++ -o main main.o section.o file.o symbol.o version.o relocation.o disasm.o dis-table.o upm.o instruction.o block.o function.o edge.o
+main: main.o section.o file.o symbol.o version.o relocation.o disasm.o dis-table.o upm.o operand.o instruction.o block.o function.o edge.o 
+	g++ -o main main.o section.o file.o symbol.o version.o relocation.o disasm.o dis-table.o upm.o operand.o SCInstr.o SCBlock.o SCFunction.o SCEdge.o
 main.o: main.cc
 	g++ -c main.cc
 file.o: file.cc file.h
@@ -18,6 +18,8 @@ dis-table.o: dis-table.cpp dis-table.h SCInstr.h
 	g++ -c -std=c++11 dis-table.cpp
 upm.o: upm.h upm.cc
 	g++ -c upm.cc
+operand.o: type.h dis-table.h
+	g++ -c operand.cc
 instruction.o: type.h SCInstr.h SCInstr.cpp
 	g++ -c SCInstr.cpp
 block.o: SCBlock.h SCBlock.cpp type.h

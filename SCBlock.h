@@ -42,6 +42,7 @@ class SCBlock
 {
     public:
         SCBlock ();                             /* constructor */
+        ~SCBlock();
 
         // getters and setters
 
@@ -65,18 +66,17 @@ class SCBlock
 
         // ==== methods ====
         void moveSuccEdgesToBBL(SCBlock* to);
-        void addEntryEdge();
-        SCEdge* getEdgeFromBBL(SCBlock* from);
-        SCEdge* getEdgeToBBL(SCBlock* to);
-        void addEdgeToHELL(UINT8 type);
-        void addEdgeFromHELL(UINT8 type);
-        void addEdgeToBBL(SCBlock* to, UINT8 type);
-        void addEdgeFromBBL(SCBlock* from, UINT8 type);
-        void removeAllEdges();
-        void removeSuccEdges();
-        void removePredEdges();
+        // void addEntryEdge();
+        // SCEdge* getEdgeFromBBL(SCBlock* from);
+        // SCEdge* getEdgeToBBL(SCBlock* to);
+        // void addEdgeToBBL(SCBlock* to, UINT8 type);
+        // void addEdgeFromBBL(SCBlock* from, UINT8 type);
+        void addSuccEdge(SCEdge* e);
+        void addPredEdge(SCEdge* e);
         bool succBBLExistOrNot(SCBlock* bbl);
         bool predBBLExistOrNot(SCBlock* bbl);
+        void removePredEdge(SCEdge* edge);
+        void removeSuccEdge(SCEdge* edge);
 
 
     private:
@@ -103,7 +103,9 @@ class SCBlockList
 {
     public:
         SCBlockList ();                             /* constructor */
-        static SCBlock* sharedBlockList();
+        static SCBlockList* sharedBlockList();
+
+        BlockListT getBlockList();
 
         void createBBLList(SCInstrList instrList);
         void markBBL(SCInstrList instrList);
@@ -111,6 +113,8 @@ class SCBlockList
 
         SCBlock* getPrevBBL(SCBlock* bbl);
         SCBlock* getNextBBL(SCBlock* bbl);
+        void deleteBBLs(SCBlock* first, SCBlock* last);
+        // void removeBBLsFromList(SCBlock* first, SCBlock* last);
 
 
     private:

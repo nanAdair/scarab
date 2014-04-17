@@ -36,13 +36,13 @@ class SCEdge
         SCEdge ( const SCEdge &other );   /* copy constructor */
         ~SCEdge ();                            /* destructor       */
 
-        void setFlag(UINT16 flag);
-        bool hasFlag(UINT16 flag);
-        void removeFlag(UINT16 flag);
+        void setFlag(EFLAG flag);
+        bool hasFlag(EFLAG flag);
+        void removeFlag(EFLAG flag);
 
         void setTo(SCBlock* to);
         void setFrom(SCBlock* from);
-        void setType(UINT16 type);
+        void setType(ETYPE type);
 
         SCBlock* getTo();
         SCBlock* getFrom();
@@ -54,7 +54,7 @@ class SCEdge
         SCBlock *e_to;   // basic block pointed to by this edge y
         SCBlock *e_from;   // bbl where this edge originates y
         EFLAG e_flags;   // flags
-        UINT16 e_type;// type y
+        ETYPE e_type;// type y
 
 }; /* -----  end of class SCEdge  ----- */
 
@@ -76,8 +76,8 @@ class SCEdgeList
         void removeBBLEdge(SCBlock* from, SCBlock* to, ETYPE type);
         void removeEdge(SCEdge* edge);
         bool edgeExistOrNot(SCEdge* edge);
-
-
+        bool edgeExistOrNot(SCBlock* from, SCBlock* to, ETYPE type);
+        SCEdge* getBBLEdge(SCBlock* from, SCBlock* to, ETYPE type);
 
     private:
         EdgeListT p_edges;

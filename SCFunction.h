@@ -19,6 +19,7 @@
 #define __Scarab__SCFunction__
 
 #include "type.h"
+#include <string>
 
 class SCInstr;
 class SCBlock;
@@ -27,7 +28,8 @@ class SCBlock;
 class SCFunction
 {
     public:
-        SCFunction ();
+        SCFunction();
+        ~SCFunction();
         
         void setFlag(UINT32 flag);
         bool hasFlag(UINT32 flag);
@@ -45,6 +47,7 @@ class SCFunction
         SCBlock* getEntryBlock();
         SCBlock* getExitBlock();
         
+        // methods
     
 
 
@@ -64,7 +67,8 @@ class SCFunctionList {
         SCFunctionList();
         static SCFunctionList* sharedFunctionList();
         void createFunctionList(BlockListT bbls);
-        void markFunctions(SymbolListT syms);
+        void markFunctions();
+        void deleteFunctions(SCFunction* first, SCFunction* last);
 
     private:
         FunListT p_funs;

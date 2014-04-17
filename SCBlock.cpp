@@ -17,6 +17,7 @@
  */
 #include "SCBlock.h"
 #include <algorithm>
+#include <iterator>
 
 #include "SCInstr.h"
 #include "SCEdge.h"
@@ -26,9 +27,17 @@
 SCBlock::SCBlock() {
     b_type = BT_INVALID;
     b_flags = 0;
-    b_weight = 0;
     b_first = b_last = NULL;
     b_id = 0;   // TODO: global increase;
+}
+SCBlock::~SCBlock() {
+    for(EdgeIterT it=b_pred.begin();it!=b_pred.end();++it) {
+        delete *it;
+    }
+    for(EdgeIterT it=b_succ.begin();it!=b_succ.end();++it) {
+        delete *it;
+    }
+    INSTRLIST->deleteInstrs(b_first, b_last);
 }
 
 void SCBlock::setFlag(BFLAG flag) {
@@ -49,7 +58,7 @@ void SCBlock::setType(BTYPE type) {
 
 void SCBlock::setFirstInstr(SCInstr* instr) {
     if (instr == NULL) {
-        printf("Warning: setFirstInstr(): instr == NULL!\n");
+        //printf("Warning: setFirstInstr(): instr == NULL!\n");
         return;
     }
     this->b_first = instr;
@@ -57,7 +66,7 @@ void SCBlock::setFirstInstr(SCInstr* instr) {
 
 void SCBlock::setLastInstr(SCInstr* instr) {
     if (instr == NULL) {
-        printf("Warning: setLastInstr(): instr == NULL!\n");
+        //printf("Warning: setLastInstr(): instr == NULL!\n");
         return;
     }
     this->b_last = instr;
@@ -87,8 +96,16 @@ UINT32 SCBlock::getID() {
     return this->b_id;
 }
 
-SCFunction* getFunction() {
+SCFunction* SCBlock::getFunction() {
     return this->b_fun;
+}
+
+EdgeListT SCBlock::getSucc() {
+    return b_succ;
+}
+
+EdgeListT SCBlock::getPred() {
+    return b_pred;
 }
 
 void SCBlock::moveSuccEdgesToBBL(SCBlock* to) {
@@ -100,55 +117,47 @@ void SCBlock::moveSuccEdgesToBBL(SCBlock* to) {
     this->b_succ.clear();
 }
 
-void SCBlock::addEntryEdge() {
-    SCBlock* firstBBL = getFunction()->getEntryBlock();
-    if (getEdgeFromBBL(firstBBL)!=NULL) {
-        INSTRLIST->addBBLEdge(firstBBL, this, ET_ENTRY);
-    }
+// void SCBlock::addEntryEdge() {
+//     SCBlock* firstBBL = getFunction()->getEntryBlock();
+//     if (getEdgeFromBBL(firstBBL)!=NULL) {
+//         INSTRLIST->addBBLEdge(firstBBL, this, ET_ENTRY);
+//     }
+// }
+
+// SCEdge* SCBlock::getEdgeFromBBL(SCBlock* from) {
+//     for(EdgeIterT it=from->getSucc().begin(); it!=(from->getSucc()).end(); ++it) {
+//         if ((*it)->getTo() == this)
+//             return (*it);
+//     }
+//     return NULL;
+// }
+
+// SCEdge* SCBlock::getEdgeToBBL(SCBlock* to) {
+//     for(EdgeIterT it=(to->getPred()).begin(); it!=(to->getPred()).end(); ++it) {
+//         if ((*it)->getFrom() == this)
+//             return (*it);
+//     }
+//     return NULL;
+// }
+
+// void SCBlock::addEdgeToBBL(SCBlock* to, UINT8 type) {
+//     EDGELIST->addBBLEdge(this, to, type);
+// }
+
+// void SCBlock::addEdgeFromBBL(SCBlock* from, UINT8 type) {
+//     EDGELIST->addBBLEdge(from, this, type);
+// }
+
+void SCBlock::addSuccEdge(SCEdge* e) {
+    b_succ.push_back(e);
 }
 
-SCEdge* SCBlock::getEdgeFromBBL(SCBlock* from) {
-    for(EdgeIterT it=from->getSucc().begin(); it!=(from->getSucc()).end(); ++it) {
-        if ((*it)->getTo() == this)
-            return (*it);
-    }
-    return NULL;
-}
-
-SCEdge* SCBlock::getEdgeToBBL(SCBlock* to) {
-    for(EdgeIterT it=(to->getPred()).begin(); it!=(to->getPred()).end(); ++it) {
-        if ((*it)->getFrom() == this)
-            return (*it);
-    }
-    return NULL;
-}
-
-void SCBlock::addEdgeToHELL(UINT8 type) {
-    // TODO: check if HELL==NULL
-    addEdgeToBBL(HELL, type);
-}
-
-void SCBlock::addEdgeFromHELL(UINT8 type) {
-    // TODO: check if HELL==NULL
-    addEdgeFromBBL(HELL, type);
-}
-
-void SCBlock::addEdgeToBBL(SCBlock* to, UINT8 type) {
-    EDGELIST->addBBLEdge(this, to, type);
-}
-void SCBlock::addEdgeFromBBL(SCBlock* from, UINT8 type) {
-    EDGELIST->addBBLEdge(from, this, type);
-}
-
-
-void SCBlock::removeAllEdges() {
-    for(it=b_pred.begin(); it!=b_pred.end(); ++it) {
-
-    }
+void SCBlock::addPredEdge(SCEdge* e) {
+    b_pred.push_back(e);
 }
 
 bool SCBlock::succBBLExistOrNot(SCBlock* bbl) {
-    for(EdgeIterT it=getSucc().begin(); it!=getSucc().end(); ++it) {
+    for(EdgeIterT it=b_succ.begin(); it!=b_succ.end(); ++it) {
         if ((*it)->getTo() == bbl)
             return true;
     }
@@ -156,11 +165,25 @@ bool SCBlock::succBBLExistOrNot(SCBlock* bbl) {
 }
 
 bool SCBlock::predBBLExistOrNot(SCBlock* bbl) {
-    for(EdgeIterT it=getPred().begin(); it!=getPred().end(); ++it) {
+    for(EdgeIterT it=b_pred.begin(); it!=b_pred.end(); ++it) {
         if ((*it)->getFrom() == bbl)
             return true;
     }
     return false;
+}
+
+void SCBlock::removePredEdge(SCEdge* edge) {
+    EdgeIterT it = std::find(b_pred.begin(), b_pred.end(), edge);
+    if (it!=b_pred.end()) {
+        b_pred.erase(it);
+    }
+}
+
+void SCBlock::removeSuccEdge(SCEdge* edge) {
+    EdgeIterT it = std::find(b_succ.begin(), b_succ.end(), edge);
+    if (it!=b_succ.end()) {
+        b_succ.erase(it);
+    }
 }
 
 
@@ -172,8 +195,7 @@ SCBlockList::SCBlockList() {
    
     // set up HELL block
     if (HELL) {
-        HELL->removeAllEdges();
-        delete HELL;
+        FUNLIST->deleteFunctions(HELL->getFunction(), HELL->getFunction());
     }
     HELL = new SCBlock();
     SCFunction* hellfun = new SCFunction();
@@ -201,16 +223,16 @@ void SCBlockList::createBBLList(SCInstrList instrList) {
     InstrListT instrs = instrList.getInstrList(); 
     SCBlock *bbl;
     for(instrIter=instrs.begin(); instrIter!=instrs.end(); ++instrIter) {
-        if(instrIter->hasFlag(BBL_START)) {
+        if((*instrIter)->hasFlag(BBL_START)) {
             bbl = new SCBlock();
-            bbl->setFirstInstr(instrIter);
-            bbl->setLastInstr(instrIter);
+            bbl->setFirstInstr(*instrIter);
+            bbl->setLastInstr(*instrIter);
             (this->p_bbls).push_back(bbl);
         }
-        else if(instrIter->hasFlag(BBL_END)) {
-            bbl->setLastInstr(instrIter);
+        else if((*instrIter)->hasFlag(BBL_END)) {
+            bbl->setLastInstr(*instrIter);
         }
-        instrIter->setBlock(bbl); 
+        (*instrIter)->setBlock(bbl); 
 
     }
 }
@@ -224,12 +246,14 @@ void SCBlockList::markBBL(SCInstrList instrList) {
     for(instrIter=instrs.begin(); instrIter!=instrs.end(); ++instrIter) {
         if ((*instrIter)->isPCChangingClass() || (*instrIter)->isDataInstruction()) {
             (*instrIter) -> setFlag(BBL_END);
-            nextInstrIter = std::next(instrIter, 1);
+            nextInstrIter = instrIter;
+            ++nextInstrIter;
             if (nextInstrIter != instrs.end()) {
                 (*nextInstrIter) -> setFlag(BBL_START);
             }
         }
-        nextInstrIter = std::next(instrIter, 1);
+        nextInstrIter = instrIter;
+        ++nextInstrIter;
         if (nextInstrIter != instrs.end()) {
             (*instrIter) -> setFlag(BBL_END);
             (*instrIter) -> setFlag(FUN_END);
@@ -242,7 +266,7 @@ void SCBlockList::markBBL(SCInstrList instrList) {
 void SCBlockList::divideBBLByInstr(SCBlock* bbl, SCInstr* ins) {
     
     if (ins->hasFlag(BBL_START)) {
-        Report(RT_MAIN, "Attempt to devide BBL with an instruction that start a BBL\n");
+        // Report(RT_MAIN, "Attempt to devide BBL with an instruction that start a BBL\n");
         return;
     }
     
@@ -251,7 +275,7 @@ void SCBlockList::divideBBLByInstr(SCBlock* bbl, SCInstr* ins) {
     
     BlockIterT bblIt = std::find(p_bbls.begin(), p_bbls.end(), bbl);
     if (bblIt == p_bbls.end()) {
-        Report(RP_MAIN, "FATAL: bbl not in the list!");
+        // Report(RP_MAIN, "FATAL: bbl not in the list!");
     }
     p_bbls.insert(++bblIt, nbbl);
 
@@ -280,14 +304,11 @@ void SCBlockList::divideBBLByInstr(SCBlock* bbl, SCInstr* ins) {
     bbl->setLastInstr(prevIns);
 
     // Add an edge between the two bbls.
-    SCEdge* edge = EDGELIST->addBBLList(bbl, nbbl, ET_NORMAL);
-    edge->setWeight(bbl->getWeight());
+    SCEdge* edge = EDGELIST->addBBLEdge(bbl, nbbl, ET_NORMAL);
 
     if (bbl == bbl->getFunction()->getLastBlock()) {
         bbl->getFunction()->setLastBlock(nbbl);
     }
-
-    nbbl->setWeight(bbl->getWeight());
 
     // TODO: flist update 
 
@@ -311,3 +332,31 @@ SCBlock* SCBlockList::getNextBBL(SCBlock* bbl) {
     }
     return *it;
 }
+
+void SCBlockList::deleteBBLs(SCBlock* first, SCBlock* last) {
+    if (!first || !last)
+        return;
+    BlockIterT fit = p_bbls.begin();
+    BlockIterT lit = p_bbls.end();
+    if (fit==p_bbls.end() || lit==p_bbls.end())
+        return;
+    if (std::distance(fit,lit)<0)
+        return;
+
+    ++lit;
+    for(BlockIterT it=fit; it!=lit; ++it) {
+        delete *it;
+    }
+    p_bbls.erase(fit, lit);
+}
+
+// void SCBlockList::removeBBLsFromList(SCBlock* first, SCBlock* last) {
+//     if (!first || !last)
+//         return;
+//     BlockIterT fit = p_bbls.begin();
+//     BlockIterT lit = p_bbls.end();
+//     if (fit==p_bbls.end() || lit==p_bbls.end() || fit>lit)
+//         return;
+//     ++lit;
+//     p_bbls.erase(fit, lit);
+// }

@@ -32,6 +32,10 @@ class SCInstr
 {
     public:
 
+        SCInstr();
+        SCInstr(struct SCINSTR_INTERNAL_STRUCT tmp);
+        ~SCInstr();
+
         // ==== getters and setters ====
         void setFlag(IFLAG flag);
         bool hasFlag(IFLAG flag);
@@ -54,7 +58,7 @@ class SCInstr
         bool isFPClass();
         bool isLeaClass();
         bool isLeaveClass();
-        bool isLoopCLass();
+        bool isLoopClass();
         bool isMovClass();
         bool isNOPClass();
         bool isOPDIRClass();
@@ -68,13 +72,6 @@ class SCInstr
         bool isConditionalInstr();
 
         bool isOnlyInstrInBBL();
-
-        SCInstr();
-        // SCInstr(int,int,int,int,Operand*,Operand*,
-        //     Operand*,Operand*,int,int,int,int,int,
-        //     int,int,INSTRUCTION_TYPE,NORMAL_INSTRUCTION_CLASS,
-        //     int,)
-        SCInstr(struct SCINSTR_INTERNAL_STRUCT tmp);
 
         /* prefixes */
         INT8 lockAndRepeat;
@@ -154,6 +151,8 @@ class SCInstrList
 
         SCInstr* getPrevInstr(SCInstr* ins);
         SCInstr* getNextInstr(SCInstr* ins);
+
+        void deleteInstrs(SCInstr* first, SCInstr* last);
 
 
 	private: 

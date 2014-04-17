@@ -17,13 +17,21 @@
  */
 #include "SCInstr.h"
 #include <algorithm>
+#include <iterator>
 
 #include "SCFunction.h"
 #include "SCBlock.h"
+#include "SCEdge.h"
 #include "operand.h"
 
  SCInstr::SCInstr() {
 
+ }
+
+ SCInstr::~SCInstr() {
+    delete dest, src1, src2,src3;
+    delete assembly, ret_machineCode, mnemonic;
+    delete binary;
  }
 
  SCInstr::SCInstr(SCINSTR_INTERNAL_STRUCT tmp) {
@@ -187,9 +195,9 @@ bool SCInstr::isConditionalInstr() {
 
 
 bool SCInstr::isOnlyInstrInBBL() {
-    if ( this->i_block->getFirst() != this )
+    if ( this->i_block->getFirstInstr() != this )
         return false;
-    if ( this->i_block->getLast() != this )
+    if ( this->i_block->getLastInstr() != this )
         return false;
     return true;
 }
@@ -209,25 +217,25 @@ SCInstrList* SCInstrList::sharedInstrList() {
     return _sharedInstrList;
 }
 
-InstrListT SCInstr::getInstrList() {
+InstrListT SCInstrList::getInstrList() {
     return this->p_instrs;
 }
 
-void SCInstr::setInstrList(InstrListT &ins) {
+void SCInstrList::setInstrList(InstrListT &ins) {
     (this->p_instrs).assign(ins.begin(), ins.end());
 }
 
-void SCInstr::funResolveExitBlock() {
+void SCInstrList::funResolveExitBlock() {
     InstrIterT instrIter;
-    for(instrIter=p_instrs.begins(); instrIter!=p_instrs.end(); ++instrIter) {
+    for(instrIter=p_instrs.begin(); instrIter!=p_instrs.end(); ++instrIter) {
         if ((*instrIter)->isReturnClass()) {
             EDGELIST->addBBLEdge((*instrIter)->getBlock(), INSTR_FUNCTION(*instrIter)->getExitBlock(), ET_EXIT);
             continue;
         }
 
         if ((*instrIter)->isDataInstruction() && 
-                (*instrIter)->getBlock() == INSTR_FUNCTION(*instrIter)->getFirst() && 
-                (*instrIter)->getBlock() == INSTR_FUNCTION(*instrIter)->getLast()) {
+                (*instrIter)->getBlock() == INSTR_FUNCTION(*instrIter)->getFirstBlock() && 
+                (*instrIter)->getBlock() == INSTR_FUNCTION(*instrIter)->getLastBlock()) {
             EDGELIST->addBBLEdge((*instrIter)->getBlock(), INSTR_FUNCTION(*instrIter)->getExitBlock(), ET_EXIT);
 
                 }
@@ -237,76 +245,76 @@ void SCInstr::funResolveExitBlock() {
 }
 
 void SCInstrList::resolveTargets() {
-    for(InstrIterT it=p_instrs.begin(); it!=p_instrs.end(); ++it) {
+    // for(InstrIterT it=p_instrs.begin(); it!=p_instrs.end(); ++it) {
         // 数据指令所在bbl的做法：
         // 1. 加一条从entry指向这个bbl的边
         // 2. 这个bbl指向HELL的边
         // 3. HELL指向bbl下一个块的边
         // 4. 这个bbl连接下一个bbl的边
-        if ((*it)->isDataInstruction()) {
-            INSTR_FUNCTION(*it)->setFlag(FUNCTION_DATA_INSTRUCTION_FLAG);
-            if ((*it) != (*it)->getBlock()->getFirst()) {
-                BLOCKLIST->divideBBLByInstr((*it)->getBlock(), *it)
-            }
-            // represents data in the text section
-            (*it)->getBlock()->setType(BT_DATABLOCK);
+    //     if ((*it)->isDataInstruction()) {
+    //         INSTR_FUNCTION(*it)->setFlag(FUNCTION_DATA_INSTRUCTION_FLAG);
+    //         if ((*it) != (*it)->getBlock()->getFirst()) {
+    //             BLOCKLIST->divideBBLByInstr((*it)->getBlock(), *it)
+    //         }
+    //         // represents data in the text section
+    //         (*it)->getBlock()->setType(BT_DATABLOCK);
 
-            // the first bbl in a function
-            if ((*it)->getBlock()==INSTR_FUNCTION(*it)->getFirst()) {
-                (*it)->getBlock()->addEntryEdge();
-            }
+    //         // the first bbl in a function
+    //         if ((*it)->getBlock()==INSTR_FUNCTION(*it)->getFirst()) {
+    //             (*it)->getBlock()->addEntryEdge();
+    //         }
 
-            if ((*it)->getNextInstr()!=NULL) {
-                (*it)->getBlock()->addEdgeToHELL(ET_HELL);
-                (*it)->getNextInstr()->getBlock()->addEdgeFromHELL(ET_HELLMAYBE);
-                EDGELIST->addBBLEdge((*it)->getBlock(), (*it)->getNextInstr()->getBlock(), ET_DATALINK);
-                Report(RP_TRIVIAL, "Added Hell edge for data function %s\n", (*it)->getBlock()->getFunction()->getName());
-            }
-            else {
-                Report(RP_TRIVIAL, "Data instruction has no successor\n");
-            }
-            continue;
-        }
+    //         if ((*it)->getNextInstr()!=NULL) {
+    //             (*it)->getBlock()->addEdgeToHELL(ET_HELL);
+    //             (*it)->getNextInstr()->getBlock()->addEdgeFromHELL(ET_HELLMAYBE);
+    //             EDGELIST->addBBLEdge((*it)->getBlock(), (*it)->getNextInstr()->getBlock(), ET_DATALINK);
+    //             Report(RP_TRIVIAL, "Added Hell edge for data function %s\n", (*it)->getBlock()->getFunction()->getName());
+    //         }
+    //         else {
+    //             Report(RP_TRIVIAL, "Data instruction has no successor\n");
+    //         }
+    //         continue;
+    //     }
 
-        if (!((*it)->isPCChangingClass())) {
-            if ((*it)->hasFlag(BBL_END) && !((*it)->getBlock()->SuccBBLExistOrNot(BLOCKLIST->getNextBBL((*it)->getBlock())))) {
-                if (BLOCKLIST->getNextBBL((*it)->getBlock()) == NULL) {
-                    // last bbl in the program
-                    (*it)->getBlock()->addEdgeToHELL(ET_HELL);
-                }
-                else {
-                    (*it)->getBlock()->addEdgeToBBL(BLOCKLIST->getNextBBL((*it)->getBlock()), ET_NORMAL);
+    //     if (!((*it)->isPCChangingClass())) {
+    //         if ((*it)->hasFlag(BBL_END) && !((*it)->getBlock()->SuccBBLExistOrNot(BLOCKLIST->getNextBBL((*it)->getBlock())))) {
+    //             if (BLOCKLIST->getNextBBL((*it)->getBlock()) == NULL) {
+    //                 // last bbl in the program
+    //                 (*it)->getBlock()->addEdgeToHELL(ET_HELL);
+    //             }
+    //             else {
+    //                 (*it)->getBlock()->addEdgeToBBL(BLOCKLIST->getNextBBL((*it)->getBlock()), ET_NORMAL);
                    
-                    if (INSTR_FUNCTION(*it)!=INSTR_FUNCTION(INSTRLIST->getNextInstr(*it))) {
-                        INSTR_FUNCTION(*it)->getExitBlock()->addBBLEdge(INSTR_FUNCTION(INSTRLIST->getNextInstr(*it))->getExitBlock(), ET_COMPENSATE);
-                    }
-                }
-            }
-            (*it)->getBlock()->setType(BT_NORMAL);
-            continue;
-        }
+    //                 if (INSTR_FUNCTION(*it)!=INSTR_FUNCTION(INSTRLIST->getNextInstr(*it))) {
+    //                     INSTR_FUNCTION(*it)->getExitBlock()->addBBLEdge(INSTR_FUNCTION(INSTRLIST->getNextInstr(*it))->getExitBlock(), ET_COMPENSATE);
+    //                 }
+    //             }
+    //         }
+    //         (*it)->getBlock()->setType(BT_NORMAL);
+    //         continue;
+    //     }
 
-        if ((*it)->isReturnClass()) {
-            (*it)->getBlock()->setType(BT_RETURN);
-            continue;
-        }
+    //     if ((*it)->isReturnClass()) {
+    //         (*it)->getBlock()->setType(BT_RETURN);
+    //         continue;
+    //     }
 
-        if ((*it)->isSyscallClass()) {
+    //     if ((*it)->isSyscallClass()) {
 
-            SCBlock* newbbl = NULL;
-            SCInstr* nextins = INSTRLIST->getNextInstr(*it);
-            if ((*it) == ((*it)->getBlock()->getLastInstr())) {
-                newbbl = (*it)->getBlock();
-            }
-            else {
-                if (nextins != nextins->getBlock()->getFirstInstr()) {
-                BLOCKLIST->divideBBLByInstr((*it)->getBlock(), nextins);
-                }
-                newbbl = (*it)->getBlock();
-            }
-            newbbl->setType(BT_SYSCALL);
-        }
-    }
+    //         SCBlock* newbbl = NULL;
+    //         SCInstr* nextins = INSTRLIST->getNextInstr(*it);
+    //         if ((*it) == ((*it)->getBlock()->getLastInstr())) {
+    //             newbbl = (*it)->getBlock();
+    //         }
+    //         else {
+    //             if (nextins != nextins->getBlock()->getFirstInstr()) {
+    //             BLOCKLIST->divideBBLByInstr((*it)->getBlock(), nextins);
+    //             }
+    //             newbbl = (*it)->getBlock();
+    //         }
+    //         newbbl->setType(BT_SYSCALL);
+    //     }
+    // }
 }
 
 
@@ -325,4 +333,21 @@ SCInstr* SCInstrList::getNextInstr(SCInstr* ins) {
         return NULL;
     }
     return *it;
+}
+
+void SCInstrList::deleteInstrs(SCInstr* first, SCInstr* last) {
+    if (!first || !last)
+        return;
+    InstrIterT fit = std::find(p_instrs.begin(),p_instrs.end(),first);
+    InstrIterT lit = std::find(p_instrs.begin(),p_instrs.end(),last);
+    if (fit==p_instrs.end() || lit==p_instrs.end())
+        return;
+    if (std::distance(fit,lit)<0)
+        return;
+
+    ++lit;
+    for(InstrIterT it=fit; it!=lit; ++it) {
+        delete *it;
+    }
+    p_instrs.erase(fit, lit);
 }
