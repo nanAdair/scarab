@@ -106,6 +106,17 @@ int SCSymbol::getSymbolOffsetGOT(SCSymbolListDYN *sym_list)
     return (-4) * (i - index + 1);
 }
 
+// ========== SCSymbolListREL ==========
+
+static SCSymbolListREL* _sharedSCSymListREL = NULL;
+
+SCSymbolListREL* SCSymbolListREL::sharedSymListREL() {
+    if (_sharedSCSymListREL == NULL) {
+        _sharedSCSymListREL = new SCSymbolListREL();
+    }
+    return _sharedSCSymListREL;
+}
+
 void SCSymbolListREL::init(SCFileREL &file, SCSectionList *sl, SCSectionList *msl)
 {
     Elf32_Sym *cur_sym;

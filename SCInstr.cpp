@@ -245,7 +245,7 @@ void SCInstrList::funResolveExitBlock() {
 }
 
 void SCInstrList::resolveTargets() {
-    // for(InstrIterT it=p_instrs.begin(); it!=p_instrs.end(); ++it) {
+    for(InstrIterT it=p_instrs.begin(); it!=p_instrs.end(); ++it) {
         // 数据指令所在bbl的做法：
         // 1. 加一条从entry指向这个bbl的边
         // 2. 这个bbl指向HELL的边
@@ -276,23 +276,20 @@ void SCInstrList::resolveTargets() {
     //         continue;
     //     }
 
-    //     if (!((*it)->isPCChangingClass())) {
-    //         if ((*it)->hasFlag(BBL_END) && !((*it)->getBlock()->SuccBBLExistOrNot(BLOCKLIST->getNextBBL((*it)->getBlock())))) {
-    //             if (BLOCKLIST->getNextBBL((*it)->getBlock()) == NULL) {
-    //                 // last bbl in the program
-    //                 (*it)->getBlock()->addEdgeToHELL(ET_HELL);
-    //             }
-    //             else {
-    //                 (*it)->getBlock()->addEdgeToBBL(BLOCKLIST->getNextBBL((*it)->getBlock()), ET_NORMAL);
-                   
-    //                 if (INSTR_FUNCTION(*it)!=INSTR_FUNCTION(INSTRLIST->getNextInstr(*it))) {
-    //                     INSTR_FUNCTION(*it)->getExitBlock()->addBBLEdge(INSTR_FUNCTION(INSTRLIST->getNextInstr(*it))->getExitBlock(), ET_COMPENSATE);
-    //                 }
-    //             }
-    //         }
-    //         (*it)->getBlock()->setType(BT_NORMAL);
-    //         continue;
-    //     }
+        if (!((*it)->isPCChangingClass())) {
+            if ((*it)->hasFlag(BBL_END) && 
+                !(EDGELIST->edgeExistOrNot((*it)->getBlock(), BLOCKLIST->getNextBBL((*it)->getBlock())))) {
+                if (BLOCKLIST->getNextBBL((*it)->getBlock()) == NULL) {
+                    // last bbl in the program
+                    EDGELIST->addBBLEdge((*it)->getBlock(), HELL, ET_HELL);
+                }
+                else {
+                    EDGELIST->addBBLEdge((*it)->getBlock(), BLOCKLIST->getNextBBL((*it)->getBlock()), ET_NORMAL);
+                }
+            }
+            (*it)->getBlock()->setType(BT_NORMAL);
+            continue;
+        }
 
     //     if ((*it)->isReturnClass()) {
     //         (*it)->getBlock()->setType(BT_RETURN);
@@ -314,7 +311,11 @@ void SCInstrList::resolveTargets() {
     //         }
     //         newbbl->setType(BT_SYSCALL);
     //     }
-    // }
+    }
+}
+
+void SCInstrList::addInstrBack(SCInstr* ins) {
+    p_instrs.push_back(ins);
 }
 
 

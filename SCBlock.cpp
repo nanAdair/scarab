@@ -220,7 +220,7 @@ BlockListT SCBlockList::getBlockList() {
 
 void SCBlockList::createBBLList(SCInstrList instrList) {
     InstrIterT instrIter;
-    InstrListT instrs = instrList.getInstrList(); 
+    InstrListT instrs = INSTRLIST->getInstrList(); 
     SCBlock *bbl;
     for(instrIter=instrs.begin(); instrIter!=instrs.end(); ++instrIter) {
         if((*instrIter)->hasFlag(BBL_START)) {
@@ -238,11 +238,11 @@ void SCBlockList::createBBLList(SCInstrList instrList) {
 }
 
 void SCBlockList::markBBL(SCInstrList instrList) {
-    SCInstr* startins = (instrList.getInstrList()).front();
+    SCInstr* startins = (INSTRLIST->getInstrList()).front();
     startins->setFlag(BBL_START);
     
     InstrIterT instrIter, nextInstrIter;
-    InstrListT instrs = instrList.getInstrList();
+    InstrListT instrs = INSTRLIST->getInstrList();
     for(instrIter=instrs.begin(); instrIter!=instrs.end(); ++instrIter) {
         if ((*instrIter)->isPCChangingClass() || (*instrIter)->isDataInstruction()) {
             (*instrIter) -> setFlag(BBL_END);
@@ -252,9 +252,11 @@ void SCBlockList::markBBL(SCInstrList instrList) {
                 (*nextInstrIter) -> setFlag(BBL_START);
             }
         }
+
         nextInstrIter = instrIter;
         ++nextInstrIter;
-        if (nextInstrIter != instrs.end()) {
+        if (nextInstrIter == instrs.end()) {
+            // Last instr
             (*instrIter) -> setFlag(BBL_END);
             (*instrIter) -> setFlag(FUN_END);
             break;

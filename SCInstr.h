@@ -146,8 +146,7 @@ class SCInstrList
         void funResolveExitBlock();
         void resolveTargets();
         SCInstr* addressToInstruction();
-        void addInstrAfterInstr(SCInstr* instr);
-        void addInstrBeforeInstr(SCInstr* instr);
+        void addInstrBack(SCInstr* ins);
 
         SCInstr* getPrevInstr(SCInstr* ins);
         SCInstr* getNextInstr(SCInstr* ins);

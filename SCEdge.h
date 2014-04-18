@@ -76,6 +76,7 @@ class SCEdgeList
         void removeBBLEdge(SCBlock* from, SCBlock* to, ETYPE type);
         void removeEdge(SCEdge* edge);
         bool edgeExistOrNot(SCEdge* edge);
+        bool edgeExistOrNot(SCBlock* from, SCBlock* to);
         bool edgeExistOrNot(SCBlock* from, SCBlock* to, ETYPE type);
         SCEdge* getBBLEdge(SCBlock* from, SCBlock* to, ETYPE type);
 

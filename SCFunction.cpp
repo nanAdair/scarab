@@ -107,6 +107,7 @@ void SCFunctionList::createFunctionList(BlockListT blockList) {
 
 void SCFunctionList::markFunctions() {
     // TODO: transplant it
+    
 }
 
 void SCFunctionList::deleteFunctions(SCFunction* first, SCFunction* last) {

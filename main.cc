@@ -40,7 +40,7 @@ void obfPatch(InstrListT* , INSTRUCTION *dumpInstr);
 int main(int argc, char *argv[])
 {
     SCSectionList *obj_sec_list = new SCSectionList();
-    SCSymbolListREL *sym_list = new SCSymbolListREL();
+    SCSymbolListREL *sym_list = SYMLISTREL;
     SCRelocationList *rel_list = new SCRelocationList();
     
     /* Binary Abstraction Stage */
@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
     /* Disassembly Stage */
     disassembleExecutableSection(obj_sec_list);
     
-    InstrListT instr_list;
+    InstrListT instr_list = INSTRLIST->getInstrList();
     
     /* UPM Init Stage */
     SCPatchList *patch_list;
@@ -58,6 +58,9 @@ int main(int argc, char *argv[])
     /* Obfuscation Stage */
     INSTRUCTION *dumpInstr;
     dumpInstr = obfModify(&instr_list);
+
+    /* Write back the instructions into SCInstrList*/
+    INSTRLIST->setInstrList(instr_list);
     
     /* Address Patching and Date Written Back */
     finalizeMemory(obj_sec_list, &instr_list, patch_list, dumpInstr);
@@ -65,7 +68,6 @@ int main(int argc, char *argv[])
     /* Info Creation */
     patchSecContent(obj_sec_list, sym_list, argv);
 
-    SCInstrList::sharedInstrList()->setInstrList(instr_list);
     
     /* Generate Exec File */
     SCFileEXEC *exec = new SCFileEXEC();
@@ -276,7 +278,7 @@ void disassembleExecutableSection(SCSectionList *obj_sec_list)
 		else
 		    instr->secType = SECTION_OTHER;
 
-		(SCInstrList::sharedInstrList()->getInstrList()).push_back(instr);
+		INSTRLIST->addInstrBack(instr);
 
 		address += ret;
 		start += ret;

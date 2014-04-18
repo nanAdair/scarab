@@ -112,6 +112,14 @@ bool SCEdgeList::edgeExistOrNot(SCEdge* edge) {
     return (it==p_edges.end())?false:true;
 }
 
+bool SCEdgeList::edgeExistOrNot(SCBlock* from, SCBlock* to) {
+    for(EdgeIterT it=(from->getSucc()).begin(); it!=(from->getSucc()).end(); ++it) {
+        if (((*it)->getFrom()==from) && ((*it)->getTo()==to))
+            return true;
+    }
+    return false;
+}
+
 bool SCEdgeList::edgeExistOrNot(SCBlock* from, SCBlock*to, ETYPE type) {
     if(getBBLEdge(from, to, type) != NULL)
         return true;

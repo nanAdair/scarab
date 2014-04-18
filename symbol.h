@@ -47,6 +47,8 @@ class SCSymbolListDYN;
 #define SYM_PLT (1 << 2)
 #define SYM_OUT (1 << 3)
 
+#define SYMLISTREL (SCSymbolListREL::sharedSymListREL())
+
 class SCSymbol
 {
     public:
@@ -252,6 +254,8 @@ class SCSymbolListREL
 {
     public:
         friend class SCSymbolListDYN;
+
+        static SCSymbolListREL* sharedSymListREL();
         
         void
         init(SCFileREL&, SCSectionList *, SCSectionList *);
