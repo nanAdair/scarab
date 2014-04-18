@@ -1,2 +1,7 @@
 *.un~
 *.swp
+*.o
+.tags_sorted_by_file
+.tags
+main
+.DS_Store

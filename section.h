@@ -24,6 +24,7 @@
 #include "symbol.h"
 #include "instr.h"
 #include "disasm.h"
+#include "SCInstr.h"
 
 // Sections to be added
 #define INTERP_SECTION_NAME     ".interp"
@@ -358,13 +359,13 @@ class SCSectionList
         renewSectionsInfo(char *file[], int num);
         
         void
-        updateSectionSize(vector<INSTRUCTION*> *);
+        updateSectionSize(InstrListT*);
         
         void
-        updateSectionDataFromInstr(vector<INSTRUCTION*> *);
+        updateSectionDataFromInstr(InstrListT*);
         
         void
-        updateInstrAddress(vector<INSTRUCTION*> *);
+        updateInstrAddress(InstrListT*);
 
         void 
         testSectionList();

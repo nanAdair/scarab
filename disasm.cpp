@@ -1,5 +1,9 @@
 #include "disasm.h"
 #include "dis-table.h"
+#include "cstring"
+#include "cstdlib"
+#include "cstdio"
+#include "cmath"
 
 const char *RepeatPrefixes[] = {"lock", "rep", "repe", "repne"};
 const char *SegmentRegisters[] = {"es", "cs", "ss", "ds", "fs", "gs", "seg?", "seg?"};

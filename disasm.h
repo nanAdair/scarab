@@ -1,7 +1,9 @@
 #ifndef DISASM_H
 #define DISASM_H
 
-#include "dis.h"
+#include "SCInstr.h"
+#include "operand.h"
+
 
 class Disasm
 {

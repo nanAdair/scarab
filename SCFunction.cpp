@@ -15,16 +15,24 @@
  *
  * =====================================================================================
  */
+
+#include "SCFunction.h"
 #include <stdlib.h>
-#include "SCBlock.h"
+#include <iterator>
+
 #include "SCInstr.h"
+#include "SCBlock.h"
 
 SCFunction::SCFunction() {
-    this->f_flags = FUNCTION_INVALID;
+    this->f_flags = 0;
     this->f_first = this->f_last = NULL;
     this->f_id = 0;     //TODO: global increase
     this->f_name = "";
     this->f_entry = this->f_exit = NULL;
+}
+
+SCFunction::~SCFunction() {
+    BLOCKLIST->deleteBBLs(f_first, f_last);
 }
 
 void SCFunction::setFirstBlock(SCBlock *bbl) {
@@ -60,7 +68,6 @@ SCBlock* SCFunction::getExitBlock() {
 }
 
 
-
 // ==== SCFunctionList ====
 static SCFunctionList* _sharedFunctionList = NULL;
 
@@ -77,7 +84,7 @@ SCFunctionList* SCFunctionList::sharedFunctionList() {
 
 void SCFunctionList::createFunctionList(BlockListT blockList) {
     BlockIterT bblIter;
-    BlockListT bbls = blockList.getBlockList();
+    BlockListT bbls = BLOCKLIST->getBlockList();
     SCFunction *fun;
     for(bblIter=bbls.begin(); bblIter!=bbls.end(); ++bblIter) {
         if ((*bblIter)->getFirstInstr()->hasFlag(FUN_START)) {
@@ -90,7 +97,7 @@ void SCFunctionList::createFunctionList(BlockListT blockList) {
             
             (this->p_funs).push_back(fun);
         }
-        else if ((*bblIter)->getLastBlock()->hasFlag(FUN_END)) {
+        else if ((*bblIter)->getLastInstr()->hasFlag(FUN_END)) {
             fun->setLastBlock(*bblIter);
         }
         (*bblIter) -> setFunction(fun);
@@ -98,6 +105,23 @@ void SCFunctionList::createFunctionList(BlockListT blockList) {
     return;
 }
 
-void SCFunctionList::markFunctions(SymbolListT syms) {
+void SCFunctionList::markFunctions() {
     // TODO: transplant it
+}
+
+void SCFunctionList::deleteFunctions(SCFunction* first, SCFunction* last) {
+    if (!first || !last)
+        return;
+    FunIterT fit = p_funs.begin();
+    FunIterT lit = p_funs.end();
+    if (fit==p_funs.end() || lit==p_funs.end())
+        return;
+    if (std::distance(fit,lit)<0)
+        return;
+
+    ++lit;
+    for(FunIterT it=fit; it!=lit; ++it) {
+        delete *it;
+    }
+    p_funs.erase(fit, lit);
 }

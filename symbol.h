@@ -21,7 +21,6 @@
 
 #include <vector>
 #include <stdlib.h>
-#include <elf.h>
 #include <string.h>
 #include "file.h"
 #include "type.h"
