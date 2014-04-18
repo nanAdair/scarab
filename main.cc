@@ -32,7 +32,7 @@
 void binaryAbstraction(SCSectionList *, SCSymbolListREL *, SCRelocationList *, char *[]);
 void patchSecContent(SCSectionList *sl, SCSymbolListREL *sym_list, char *argv[]);
 void disassembleExecutableSection(SCSectionList *obj_sec_list);
-SCPatchList *initUpm(SCSectionList *, SCRelocationList *, InstrListT*);
+SCPatchList *initUpm(SCSectionList *, SCRelocationList *);
 INSTRUCTION *obfModify(InstrListT* instr_list);
 void finalizeMemory(SCSectionList *,  InstrListT* , SCPatchList *, INSTRUCTION *);
 void obfPatch(InstrListT* , INSTRUCTION *dumpInstr);
@@ -49,21 +49,18 @@ int main(int argc, char *argv[])
     /* Disassembly Stage */
     disassembleExecutableSection(obj_sec_list);
     
-    InstrListT instr_list = INSTRLIST->getInstrList();
+    InstrListT* insListPtr = INSTRLIST->getInstrListPtr();
     
     /* UPM Init Stage */
     SCPatchList *patch_list;
-    patch_list = initUpm(obj_sec_list, rel_list, &instr_list);
+    patch_list = initUpm(obj_sec_list, rel_list);
     
     /* Obfuscation Stage */
     INSTRUCTION *dumpInstr;
-    dumpInstr = obfModify(&instr_list);
-
-    /* Write back the instructions into SCInstrList*/
-    INSTRLIST->setInstrList(instr_list);
+    dumpInstr = obfModify(insListPtr);
     
     /* Address Patching and Date Written Back */
-    finalizeMemory(obj_sec_list, &instr_list, patch_list, dumpInstr);
+    finalizeMemory(obj_sec_list, insListPtr, patch_list, dumpInstr);
     
     /* Info Creation */
     patchSecContent(obj_sec_list, sym_list, argv);
@@ -94,33 +91,35 @@ int main(int argc, char *argv[])
     //sec->testSecData();
 }
 
-SCPatchList *initUpm(SCSectionList *sl, SCRelocationList *rel_list, InstrListT* instr_list)
+SCPatchList *initUpm(SCSectionList *sl, SCRelocationList *rel_list)
 {
     SCPatchList *patch_list = new SCPatchList();
-    patch_list->initUPMRel(sl, rel_list, instr_list);
+    patch_list->initUPMRel(sl, rel_list);
     
     return patch_list;
 }
 
-INSTRUCTION *obfModify(InstrListT* instr_list)
+INSTRUCTION *obfModify(InstrListT* inss)
 {
     InstrIterT it;
     
-    INSTRUCTION *dumpInstr = (INSTRUCTION *)malloc(sizeof(INSTRUCTION));
+    // INSTRUCTION *dumpInstr = (INSTRUCTION *)malloc(sizeof(INSTRUCTION));
+    SCInstr* dumpInstr = new SCInstr();
     dumpInstr->size = 1;
     dumpInstr->binary = (INT8 *)malloc(dumpInstr->size);
     
     char data[] = {0xff};
     memcpy((char *)dumpInstr->binary, data, dumpInstr->size);
     
-    for (it = instr_list->begin(); it != instr_list->end(); ++it) {
+    for (it = inss->begin(); it != inss->end(); ++it) {
         if ((*it)->instr_class == CLASS_JMP && (*it)->secType != SECTION_PLT)
             break;
     }
     
     cout << hex << (*it)->address << endl;
     dumpInstr->secType = (*it)->secType;
-    instr_list->insert(++it, dumpInstr);
+
+    INSTRLIST->addInsAfterIns(*it, dumpInstr);
     
     return dumpInstr;
 }

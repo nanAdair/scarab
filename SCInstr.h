@@ -19,6 +19,7 @@
 #define __Scarab__SCInstr__
 
 #include "type.h"
+#include <map>
 
 class SCFunction;
 class SCBlock;
@@ -27,6 +28,9 @@ class Operand;
 class SCInstr;
 typedef SCInstr INSTRUCTION;
 
+#define AddrInstrHashT std::map< UINT32,SCInstr* >
+#define AddrInstrIterT std::map< UINT32,SCInstr* >::iterator
+#define AddrInstrPairT std::pair<UINT32,SCInstr*>
 
 class SCInstr 
 {
@@ -44,6 +48,7 @@ class SCInstr
         void setBlock(SCBlock* bbl);
 
         SCBlock* getBlock();
+        UINT32 getAddr();
 
 
         // ==== methods ====
@@ -140,13 +145,19 @@ class SCInstrList
         
         // ==== getters and setters ====
         InstrListT getInstrList();
+        // WARNING:
+        // ONLY use the ptr to edit the content
+        // adding or deleting instr should ONLY use methods!!
+        InstrListT* getInstrListPtr();  
         void setInstrList(InstrListT &ins);
 
         // ==== methods ==== 
         void funResolveExitBlock();
         void resolveTargets();
-        SCInstr* addressToInstruction();
+        SCInstr* addrToInstr(UINT32 addr);
         void addInstrBack(SCInstr* ins);
+        void addInsBeforeIns(SCInstr* ins, SCInstr* pivot);
+        void addInsAfterIns(SCInstr* ins, SCInstr* pivot);
 
         SCInstr* getPrevInstr(SCInstr* ins);
         SCInstr* getNextInstr(SCInstr* ins);
@@ -156,6 +167,9 @@ class SCInstrList
 
 	private: 
 		InstrListT p_instrs;
+        AddrInstrHashT p_hash;
+
+        void mapAddrToIns(SCInstr* ins);
 };
 
 // ==== INTERNAL ====

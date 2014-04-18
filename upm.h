@@ -285,7 +285,7 @@ class PatchInstrtoSymbol32 : public SCPatch
 class SCPatchList
 {
     public:
-        void initUPMRel(SCSectionList *, SCRelocationList *, InstrListT*);
+        void initUPMRel(SCSectionList *, SCRelocationList *);
         void initUPMSym(SCSectionList *, SCSymbolListREL *, InstrListT*);
         void testPatchList();
 

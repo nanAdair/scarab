@@ -142,7 +142,7 @@ bool PatchSecSectoInstr32::apply()
     return false;
 }
 
-void SCPatchList::initUPMRel(SCSectionList *sl, SCRelocationList *rel_list, InstrListT* instr_list)
+void SCPatchList::initUPMRel(SCSectionList *sl, SCRelocationList *rel_list)
 {
     vector<SCRelocation*>::iterator it;
     int i = 0;
@@ -153,12 +153,13 @@ void SCPatchList::initUPMRel(SCSectionList *sl, SCRelocationList *rel_list, Inst
         int rel_addend;
         UINT8 rel_type;
         void *patch;
+        InstrListT instr_list = INSTRLIST->getInstrList();
         
         dest_sec = (*it)->getRelSection();
         dest_offset = (*it)->getRelOffset();
         rel_address = dest_sec->getSecAddress() + dest_offset;
         rel_addend = (*it)->getRelAddend();
-        dest_instr = this->backtraceInstr(instr_list, rel_address);
+        dest_instr = this->backtraceInstr(&instr_list, rel_address);
         src_address = (*it)->getRelValue();
         
         rel_type = (*it)->getRelType();
@@ -167,7 +168,7 @@ void SCPatchList::initUPMRel(SCSectionList *sl, SCRelocationList *rel_list, Inst
             /* remeber to modify dest_offset here */
             dest_offset = rel_address - dest_instr->address;
             
-            src_instr = this->backtraceInstr(instr_list, src_address);
+            src_instr = this->backtraceInstr(&instr_list, src_address);
             
             if (src_instr) {
                 if (rel_type == R_386_PC32 || rel_type == R_386_PLT32) {

@@ -217,6 +217,18 @@ void SCSymbolListREL::testSymbolList()
     }
 }
 
+SymListRELT SCSymbolListREL::getFunSymList() {
+    SymListRELT funSyms;
+    for(SymIterRELT it=sym_list.begin(); it!=sym_list.end(); ++it) {
+        if ((*it)->getSymbolType() == STT_FUNC) {
+            funSyms.push_back(*it);
+        }
+    }
+    return funSyms;
+}
+
+// ========== SCSymbolDYN ==========
+
 void SCSymbolDYN::init(UINT8 *dynsym_strn_table, SCSectionList *sl, UINT8 *file_name, SCVersionList *vl)
 {
     int name_length = strlen((const char *)(dynsym_strn_table + this->sym_name_offset));

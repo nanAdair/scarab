@@ -95,6 +95,10 @@ SCBlock* SCInstr::getBlock() {
     return this->i_block;
 }
 
+UINT32 SCInstr::getAddr() {
+    return this->address;
+}
+
 
 // ==== methods ====
 bool SCInstr::isPCChangingClass() {
@@ -220,6 +224,12 @@ SCInstrList* SCInstrList::sharedInstrList() {
 InstrListT SCInstrList::getInstrList() {
     return this->p_instrs;
 }
+InstrListT* SCInstrList::getInstrListPtr() {
+    // WARNING:
+    // ONLY use the ptr to edit the content
+    // adding or deleting instr should ONLY use methods!!
+    return &p_instrs;
+}
 
 void SCInstrList::setInstrList(InstrListT &ins) {
     (this->p_instrs).assign(ins.begin(), ins.end());
@@ -314,8 +324,43 @@ void SCInstrList::resolveTargets() {
     }
 }
 
+SCInstr* SCInstrList::addrToInstr(UINT32 addr) {
+    AddrInstrIterT it = p_hash.find(addr);
+    return (it==p_hash.end())?(NULL):(it->second);
+}
+
+void SCInstrList::mapAddrToIns(SCInstr* ins) {
+    p_hash.insert(AddrInstrPairT(ins->getAddr(), ins));
+}
+
 void SCInstrList::addInstrBack(SCInstr* ins) {
+    if (!ins)
+        return;
     p_instrs.push_back(ins);
+    mapAddrToIns(ins);
+}
+
+void SCInstrList::addInsBeforeIns(SCInstr* ins, SCInstr* pivot) {
+    if (!ins || !pivot)
+        return;
+    InstrIterT pit = std::find(p_instrs.begin(), p_instrs.end(), pivot);
+    if (pit == p_instrs.end())
+        return;
+
+    p_instrs.insert(pit, ins);
+    mapAddrToIns(ins);
+}
+
+void SCInstrList::addInsAfterIns(SCInstr* ins, SCInstr* pivot) {
+    if (!ins || !pivot)
+        return;
+    InstrIterT pit = std::find(p_instrs.begin(), p_instrs.end(), pivot);
+    if (pit == p_instrs.end())
+        return;
+
+    ++pit;
+    p_instrs.insert(pit, ins);
+    mapAddrToIns(ins);
 }
 
 
@@ -348,6 +393,7 @@ void SCInstrList::deleteInstrs(SCInstr* first, SCInstr* last) {
 
     ++lit;
     for(InstrIterT it=fit; it!=lit; ++it) {
+        p_hash.erase((*it)->getAddr());
         delete *it;
     }
     p_instrs.erase(fit, lit);

@@ -19,9 +19,11 @@
 #include "SCFunction.h"
 #include <stdlib.h>
 #include <iterator>
+#include <vector>
 
 #include "SCInstr.h"
 #include "SCBlock.h"
+#include "symbol.h"
 
 SCFunction::SCFunction() {
     this->f_flags = 0;
@@ -107,7 +109,20 @@ void SCFunctionList::createFunctionList(BlockListT blockList) {
 
 void SCFunctionList::markFunctions() {
     // TODO: transplant it
-    
+    SymListRELT funSyms = SYMLISTREL->getFunSymList();
+    SCInstr* ins;
+    for (SymIterRELT it=funSyms.begin(); it!=funSyms.end(); ++it) {
+        ins = INSTRLIST->addrToInstr((*it)->getSymbolValue());
+        if (ins == NULL)
+            continue;
+        ins->setFlag(FUN_START);
+        ins->setFlag(BBL_START);
+
+        if (ins = INSTRLIST->getPrevInstr(ins)) {
+            ins->setFlag(FUN_END);
+            ins->setFlag(BBL_END);
+        }
+    }
 }
 
 void SCFunctionList::deleteFunctions(SCFunction* first, SCFunction* last) {

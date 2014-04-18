@@ -48,6 +48,8 @@ class SCSymbolListDYN;
 #define SYM_OUT (1 << 3)
 
 #define SYMLISTREL (SCSymbolListREL::sharedSymListREL())
+#define SymListRELT vector<SCSymbol*>
+#define SymIterRELT vector<SCSymbol*>::iterator
 
 class SCSymbol
 {
@@ -278,6 +280,10 @@ class SCSymbolListREL
         
         void
         testSymbolList();
+
+        // interface for cfg
+        SymListRELT getFunSymList();
+
 
     private:
         vector<SCSymbol*> sym_list;
