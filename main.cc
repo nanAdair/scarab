@@ -44,26 +44,31 @@ int main(int argc, char *argv[])
     SCSymbolListREL *sym_list = new SCSymbolListREL();
     SCRelocationList *rel_list = new SCRelocationList();
     
+    /* Binary Abstraction Stage */
     binaryAbstraction(obj_sec_list, sym_list, rel_list, argv);
     
+    /* Disassembly Stage */
     SCInstrList *instrList = new SCInstrList();
-
-    disassembleExecutableSection(instrList, obj_sec_list);
-    
     vector<INSTRUCTION*> *instr_list;
     instr_list = instrList->getInstrList();
+    
+    disassembleExecutableSection(instrList, obj_sec_list);
+    
+    /* UPM Init Stage */
     SCPatchList *patch_list;
     patch_list = initUpm(obj_sec_list, rel_list, instr_list);
-    //patch_list = initUpm(obj_sec_list, rel_list, &instr_list);
     
-    INSTRUCTION *dumpInstr;
+    /* Obfuscation Stage */
+    INSTRUCTION *dumpInstr = NULL;
     dumpInstr = obfModify(instr_list);
-    //dumpInstr = obfModify(&instr_list);
     
+    /* Address Patching and Date Written Back */
     finalizeMemory(obj_sec_list, instr_list, patch_list, dumpInstr);
-    //finalizeMemory(obj_sec_list, &instr_list, patch_list, dumpInstr);
+    
+    /* Info Creation */
     patchSecContent(obj_sec_list, sym_list, argv);
     
+    /* Generate Exec File */
     SCFileEXEC *exec = new SCFileEXEC();
     exec->prepare(obj_sec_list);
     exec->writeOut(obj_sec_list);
@@ -112,7 +117,7 @@ INSTRUCTION *obfModify(vector<INSTRUCTION*> *instr_list)
             break;
     }
     
-    //cout << hex << (*it)->address << endl;
+    cout << hex << (*it)->address << endl;
     dumpInstr->secType = (*it)->secType;
     instr_list->insert(it+1, dumpInstr);
     
@@ -154,9 +159,13 @@ void finalizeMemory(SCSectionList *sl, vector<INSTRUCTION*> *instr_list, SCPatch
         sl->updateInstrAddress(instr_list);
         
         change = patch_list->apply();
+        cout << change << endl;
     } while (change > 0);
     
-    obfPatch(instr_list, dumpInstr);
+    if (dumpInstr) {
+        obfPatch(instr_list, dumpInstr);
+        cout << "obf patch here " << endl;
+    }
     sl->updateSectionDataFromInstr(instr_list);
 }
 
@@ -277,7 +286,7 @@ void disassembleExecutableSection(SCInstrList *instr_list, SCSectionList *obj_se
     }
 
     
-    //for (vector<INSTRUCTION*>::iterator itr = instr_list->begin(); itr != instr_list->end(); itr++)
+    //for (vector<INSTRUCTION*>::iterator itr = instr_list->getInstrList()->begin(); itr != instr_list->getInstrList()->end(); itr++)
     //printf("%s  %-30s%-35s%d\n", int2str(&(*itr)->address, sizeof(INT32), 1, 0),
     //(*itr)->ret_machineCode, (*itr)->assembly, (*itr)->secType);
 }

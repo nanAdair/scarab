@@ -29,7 +29,7 @@ bool PatchInstrtoInstr32::apply()
     
     /* S + A */
     new_value = this->src_instr->address + this->addend;
-    //cout << "1 " << old_value << " " << new_value << endl;
+    cout << "1 " << old_value << " " << new_value << endl;
     if (old_value != new_value) {
         memcpy(this->dest_instr->binary + this->dest_offset, &new_value, sizeof(int));
         return true;
@@ -49,6 +49,7 @@ bool PatchInstrtoInstrPC32::apply()
     //cout << this->src_instr->address << " ";
     //cout << this->dest_instr->address << " " << this->dest_offset << " ";
     //cout << "2 " << old_value << " "<< this->addend << " " << new_value << endl;
+    cout << "2 " << old_value << " " << new_value << endl;
     if (old_value != new_value) {
         memcpy(this->dest_instr->binary + this->dest_offset, &new_value, sizeof(int));
         return true;
@@ -65,7 +66,7 @@ bool PatchSectiontoInstr32::apply()
     
     /* S + A */
     new_value = this->src_sec->getSecAddress() + this->src_offset + this->addend;
-    //cout << "3 " << old_value << " " << new_value << endl;
+    cout << "3 " << old_value << " " << new_value << endl;
     if (old_value != new_value) {
         memcpy(this->dest_instr->binary + this->dest_offset, &new_value, sizeof(int));
         return true;
@@ -82,7 +83,7 @@ bool PatchSectiontoInstrPC32::apply()
     
     /* S + A - P*/
     new_value = (this->src_sec->getSecAddress() + this->src_offset) + this->addend - (this->dest_instr->address + this->dest_offset);
-    //cout << "4 " << old_value << " " << new_value << endl;
+    cout << "4 " << old_value << " " << new_value << endl;
     if (old_value != new_value) {
         memcpy(this->dest_instr->binary + this->dest_offset, &new_value, sizeof(int));
         return true;
@@ -98,7 +99,7 @@ bool PatchSectiontoSection32::apply()
     old_value = *(int *)(this->dest_sec->getSecData() + this->dest_offset);
     
     new_value = (this->src_sec->getSecAddress() + this->src_offset) + this->addend;
-    //cout << "5 " << old_value << " " << new_value << endl;
+    cout << "5 " << old_value << " " << new_value << endl;
     if (old_value != new_value) {
         this->dest_sec->setSecContent(this->dest_offset, (char *)&new_value, sizeof(int));
         return true;
@@ -114,7 +115,7 @@ bool PatchSectiontoSectionPC32::apply()
     old_value = *(int *)(this->dest_sec->getSecData() + this->dest_offset);
     
     new_value = (this->src_sec->getSecAddress() + this->src_offset) + this->addend - (this->dest_sec->getSecAddress() + this->dest_offset);
-    //cout << "6 " << old_value << " " << new_value << endl;
+    cout << "6 " << old_value << " " << new_value << endl;
     if (old_value != new_value) {
         this->dest_sec->setSecContent(this->dest_offset, (char *)&new_value, sizeof(int));
         return true;
@@ -127,12 +128,14 @@ bool PatchSecSectoInstr32::apply()
 {
     //cout << "7" << endl;
     int old_value, new_value;
-    old_value = *(int *)(this->dest_instr->binary + dest_offset);
+    old_value = *(int *)(this->dest_instr->binary + this->dest_offset);
 
     new_value = (this->src_sec->getSecAddress() + this->src_offset - this->base_sec->getSecAddress()) + this->addend;
-    //cout << "7 " << old_value << " " << new_value << endl;
+    cout << "7 " << old_value << " " << new_value << " ";
+    cout << this->src_sec->getSecAddress() << " " << this->src_offset << endl;
     if (old_value != new_value) {
-        memcpy(this->dest_instr->binary, &new_value, sizeof(int));
+        memcpy(this->dest_instr->binary + this->dest_offset, &new_value, sizeof(int));
+        //memcpy(this->dest_instr->binary + this->dest_offset, &new_value, sizeof(int));
         return true;
     }
     
@@ -256,9 +259,13 @@ int SCPatchList::apply()
 {
     vector<SCPatch*>::iterator it;
     int change = 0;
+    int i = 0;
     for (it = this->p_list.begin(); it != this->p_list.end(); ++it) {
-        if ((*it)->apply())
+        if ((*it)->apply()) {
             change++;
+            cout << "difference " << i << endl;
+        }
+        i++;
     }
     
     return change;
@@ -290,7 +297,11 @@ SCSection *SCPatchList::backtraceSec(SCSectionList *sl, UINT32 address)
     
     for (it = sl->getSectionList()->begin(); it != sl->getSectionList()->end(); ++it) {
         UINT32 sec_address = (*it)->getSecAddress();
-        if (sec_address <= address && (sec_address + (*it)->getSecDatasize()) > address)
+        /* !!Pay attention here!!
+         * init_array_end is an exception which the address is beyond the real range*/
+        /* TODO: fix the init_array_end special occasion */
+        if (sec_address <= address && (sec_address + (*it)->getSecDatasize()) > address || 
+                !strcmp((char *)(*it)->getSecName(), ".init_array") && sec_address <= address && (sec_address + (*it)->getSecDatasize()) >= address )
             break;
     }
     
