@@ -24,14 +24,36 @@
 #include "SCEdge.h"
 #include "operand.h"
 
- SCInstr::SCInstr() {
-
- }
+ SCInstr::SCInstr() :
+     dest(NULL),
+     src1(NULL),
+     src2(NULL),
+     src3(NULL),
+     assembly(NULL),
+     ret_machineCode(NULL),
+     mnemonic(NULL),
+     binary(NULL) {}
 
  SCInstr::~SCInstr() {
-    delete dest, src1, src2,src3;
-    delete assembly, ret_machineCode, mnemonic;
-    delete binary;
+    //delete dest, src1, src2,src3;
+    //delete assembly, ret_machineCode, mnemonic;
+    //delete binary;
+    //if (dest)
+        //delete dest;
+    //if (src1)
+        //delete src1;
+    //if (src2)
+        //delete src2;
+    //if (src3)
+        //delete src3;
+    //if (assembly)
+        //delete assembly;
+    //if (ret_machineCode)
+        //delete ret_machineCode;
+    //if (mnemonic)
+        //delete mnemonic;
+    //if (binary)
+        //delete binary;
  }
 
  SCInstr::SCInstr(SCINSTR_INTERNAL_STRUCT tmp) {

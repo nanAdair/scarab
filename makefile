@@ -1,4 +1,4 @@
-main: main.o section.o file.o symbol.o version.o relocation.o disasm.o dis-table.o upm.o operand.o instruction.o block.o function.o edge.o 
+main: main.o section.o file.o symbol.o version.o relocation.o disasm.o dis-table.o upm.o operand.o SCInstr.o SCBlock.o SCFunction.o SCEdge.o 
 	g++ -o main main.o section.o file.o symbol.o version.o relocation.o disasm.o dis-table.o upm.o operand.o SCInstr.o SCBlock.o SCFunction.o SCEdge.o
 main.o: main.cc
 	g++ -c main.cc
@@ -20,13 +20,13 @@ upm.o: upm.h upm.cc
 	g++ -c upm.cc
 operand.o: type.h dis-table.h
 	g++ -c operand.cc
-instruction.o: type.h SCInstr.h SCInstr.cpp
+SCInstr.o: type.h SCInstr.h SCInstr.cpp
 	g++ -c SCInstr.cpp
-block.o: SCBlock.h SCBlock.cpp type.h
+SCBlock.o: SCBlock.h SCBlock.cpp type.h
 	g++ -c SCBlock.cpp
-function.o: SCFunction.h SCFunction.cpp type.h
+SCFunction.o: SCFunction.h SCFunction.cpp type.h
 	g++ -c SCFunction.cpp
-edge.o: SCEdge.h SCEdge.cpp type.h
+SCEdge.o: SCEdge.h SCEdge.cpp type.h
 	g++ -c SCEdge.cpp
 clean:
 	rm -rf main *.o *~

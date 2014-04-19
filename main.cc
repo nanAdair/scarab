@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
     patch_list = initUpm(obj_sec_list, rel_list);
     
     /* Obfuscation Stage */
-    INSTRUCTION *dumpInstr;
+    INSTRUCTION *dumpInstr = NULL;
     dumpInstr = obfModify(insListPtr);
     
     /* Address Patching and Date Written Back */
@@ -64,7 +64,6 @@ int main(int argc, char *argv[])
     
     /* Info Creation */
     patchSecContent(obj_sec_list, sym_list, argv);
-
     
     /* Generate Exec File */
     SCFileEXEC *exec = new SCFileEXEC();

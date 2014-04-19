@@ -679,7 +679,8 @@ void SCSection::expandSecData(char *data, int datasize, int flag)
     int newdatasize = this->sec_datasize + datasize;
     buffer = (UINT8 *)malloc(newdatasize);
     memset(buffer, 0x0, newdatasize);
-    memcpy(buffer, this->sec_data, this->sec_datasize);
+    if (this->sec_data)
+        memcpy(buffer, this->sec_data, this->sec_datasize);
     memcpy(buffer + this->sec_datasize, data, datasize);
     
     if (this->sec_data)
