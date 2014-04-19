@@ -38,6 +38,8 @@ class SCFunction
         void setFirstBlock(SCBlock* bbl);
         void setLastBlock(SCBlock* bbl);
         void setName(std::string& name);
+        void setName(UINT8* name);
+        void setName(const char*);
         void setEntryBlock(SCBlock* bbl);
         void setExitBlock(SCBlock* bbl);
 
@@ -69,6 +71,7 @@ class SCFunctionList {
         void createFunctionList(BlockListT bbls);
         void markFunctions();
         void deleteFunctions(SCFunction* first, SCFunction* last);
+        void resolveEntrylessFunction();
 
     private:
         FunListT p_funs;

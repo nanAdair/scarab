@@ -30,7 +30,12 @@ SCFunction::SCFunction() {
     this->f_first = this->f_last = NULL;
     this->f_id = 0;     //TODO: global increase
     this->f_name = "";
-    this->f_entry = this->f_exit = NULL;
+    this->f_entry = new SCBlock();
+    this->f_exit = new SCBlock();
+    f_entry->setType(BT_ENTRY);
+    f_exit->setType(BT_EXIT);
+    f_entry->setFunction(this);
+    f_exit->setFunction(this);
 }
 
 SCFunction::~SCFunction() {
@@ -44,6 +49,13 @@ void SCFunction::setLastBlock(SCBlock *bbl) {
     this->f_last= bbl;
 }
 void SCFunction::setName(string& name) {
+    this->f_name = name;
+}
+void SCFunction::setName(UINT8* name) {
+    char *tn = (char*) name;
+    this->f_name = tn;
+}
+void SCFunction::setName(const char* name) {
     this->f_name = name;
 }
 void SCFunction::setEntryBlock(SCBlock* bbl) {
@@ -94,8 +106,7 @@ void SCFunctionList::createFunctionList(BlockListT blockList) {
             fun = new SCFunction();
             fun->setFirstBlock(*bblIter); 
             fun->setLastBlock(*bblIter);
-
-            // TODO: find the function name 
+            fun->setName(SYMLISTREL->getSymNameByAddr((*bblIter)->getFirstInstr()->getAddr()));
             
             (this->p_funs).push_back(fun);
         }
@@ -140,4 +151,12 @@ void SCFunctionList::deleteFunctions(SCFunction* first, SCFunction* last) {
         delete *it;
     }
     p_funs.erase(fit, lit);
+}
+
+void SCFunctionList::resolveEntrylessFunction() {
+    for (FunIterT it=p_funs.begin(); it!=p_funs.end(); ++it) {
+        if ((*it)->getEntryBlock()->getSucc().size() == 0) {
+
+        }
+    }
 }

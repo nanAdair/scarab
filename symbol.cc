@@ -227,6 +227,14 @@ SymListRELT SCSymbolListREL::getFunSymList() {
     return funSyms;
 }
 
+const char* SCSymbolListREL::getSymNameByAddr(UINT32 addr) {
+    for(SymIterRELT it=sym_list.begin(); it!=sym_list.end(); ++it) {
+        if ((*it)->getSymbolValue() == addr)
+            return (char*)((*it)->getSymbolName());
+    }
+    return "";
+}
+
 // ========== SCSymbolDYN ==========
 
 void SCSymbolDYN::init(UINT8 *dynsym_strn_table, SCSectionList *sl, UINT8 *file_name, SCVersionList *vl)

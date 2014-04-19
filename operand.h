@@ -18,6 +18,7 @@ class Operand{
 		Operand(int, HAVE_AUXILIARY_CODE, OPERAND_SIZE, OPERAND_TYPE, int, int, int, 
 			int, int, OPERAND_SIZE, int);
 
+		INT32 getOperand();
 
 	    /* segment */
 	    INT8 segment;

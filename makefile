@@ -13,9 +13,9 @@ version.o: version.cc version.h
 relocation.o: relocation.cc relocation.h
 	g++ -c relocation.cc
 disasm.o: disasm.cpp disasm.h dis-table.h type.h
-	g++ -c -std=c++11 disasm.cpp
+	g++ -c -std=c++0x disasm.cpp
 dis-table.o: dis-table.cpp dis-table.h SCInstr.h
-	g++ -c -std=c++11 dis-table.cpp
+	g++ -c -std=c++0x dis-table.cpp
 upm.o: upm.h upm.cc
 	g++ -c upm.cc
 operand.o: type.h dis-table.h

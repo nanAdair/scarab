@@ -312,8 +312,6 @@ void SCBlockList::divideBBLByInstr(SCBlock* bbl, SCInstr* ins) {
         bbl->getFunction()->setLastBlock(nbbl);
     }
 
-    // TODO: flist update 
-
 }
 
 

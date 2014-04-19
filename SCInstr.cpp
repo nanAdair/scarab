@@ -99,6 +99,9 @@ UINT32 SCInstr::getAddr() {
     return this->address;
 }
 
+Operand* SCInstr::getDest() {
+    return this->dest;
+}
 
 // ==== methods ====
 bool SCInstr::isPCChangingClass() {
@@ -106,95 +109,56 @@ bool SCInstr::isPCChangingClass() {
 }
 
 bool SCInstr::isCallClass() {
-    return (instr_class==CLASS_CALLF || instr_class==CLASS_CALL);
+    return ((type==FLOW_INSTRUCTION) && (instr_class==CLASS_CALLF || instr_class==CLASS_CALL));
 }
 
 bool SCInstr::isReturnClass() {
-    return (instr_class==CLASS_RETN || instr_class==CLASS_RETF);
+    return ((type==FLOW_INSTRUCTION) && (instr_class==CLASS_RETN || instr_class==CLASS_RETF));
 }
 
-bool SCInstr::isHaltClass() {
-    // TODO:
+bool SCInstr::isJmpClass() {
+    return ((type==FLOW_INSTRUCTION) && (instr_class==CLASS_JMP || instr_class==CLASS_JMPF || instr_class==CLASS_JMP_SHORT));
+}
+
+bool SCInstr::isConditionalJmpClass() {
+    if (type == FLOW_INSTRUCTION) {
+        if (instr_class<=CLASS_JG || instr_class==CLASS_JEXCZ)
+            return true;
+    }
     return false;
-}
-
-bool SCInstr::isJumpClass() {
-    // TODO:
-    return false;
-}
-
-bool SCInstr::isAddClass() {
-    return (instr_class == CLASS_ADD);
-}
-
-bool SCInstr::isAndClass() {
-    return (instr_class == CLASS_AND);
-}
-
-bool SCInstr::isBranchClass() {
-    // TODO:
-    return false;
-}
-
-bool SCInstr::isFPClass() {
-    return (type == FLOAT_INSTRUCTION);
-}
-
-bool SCInstr::isLeaClass() {
-    return (instr_class == CLASS_LEA);
-}
-
-bool SCInstr::isLeaveClass() {
-    return (instr_class == CLASS_LEAVE);
 }
 
 bool SCInstr::isLoopClass() {
-    //TODO
+    if (type == FLOW_INSTRUCTION) {
+        if (instr_class==CLASS_LOOPDNE || instr_class==CLASS_LOOPDE || instr_class==CLASS_LOOPD)
+            return true;
+    }
     return false;
 }
 
 bool SCInstr::isMovClass() {
-    return (instr_class == CLASS_MOV);
+    return (type==NORMAL_INSTRUCTION && instr_class==CLASS_MOV);
 }
 
 bool SCInstr::isNOPClass() {
-    return (instr_class == CLASS_NOP);
-}
-
-bool SCInstr::isOPDIRClass() {
-    // TODO:
-    return false;
-}
-
-bool SCInstr::isOPOFFClass() {
-    // TODO:
-    return false;
+    return (type==IRREPLACEABLE_INSTRUCTION && instr_class==CLASS_NOP);
 }
 
 bool SCInstr::isPopClass() {
-    return (instr_class == CLASS_POP);
+    return (type==STACK_OPERATE_INSTRUCTION && instr_class==CLASS_POP);
 }
 
 bool SCInstr::isPushClass() {
-    return (instr_class == CLASS_PUSH);
+    return (type==STACK_OPERATE_INSTRUCTION && instr_class==CLASS_PUSH);
 }
 
 bool SCInstr::isSubClass() {
-    return (instr_class == CLASS_SUB);
-}
-
-bool SCInstr::isSyscallClass() {
-    // TODO:
-    return false;
+    return (type==NORMAL_INSTRUCTION && instr_class==CLASS_SUB);
 }
 
 bool SCInstr::isDataInstruction() {
     // currently no data instr
     return false;
-}
-
-bool SCInstr::isConditionalInstr() {
-    // TODO: implement it.
 }
 
 
@@ -256,36 +220,8 @@ void SCInstrList::funResolveExitBlock() {
 
 void SCInstrList::resolveTargets() {
     for(InstrIterT it=p_instrs.begin(); it!=p_instrs.end(); ++it) {
-        // 数据指令所在bbl的做法：
-        // 1. 加一条从entry指向这个bbl的边
-        // 2. 这个bbl指向HELL的边
-        // 3. HELL指向bbl下一个块的边
-        // 4. 这个bbl连接下一个bbl的边
-    //     if ((*it)->isDataInstruction()) {
-    //         INSTR_FUNCTION(*it)->setFlag(FUNCTION_DATA_INSTRUCTION_FLAG);
-    //         if ((*it) != (*it)->getBlock()->getFirst()) {
-    //             BLOCKLIST->divideBBLByInstr((*it)->getBlock(), *it)
-    //         }
-    //         // represents data in the text section
-    //         (*it)->getBlock()->setType(BT_DATABLOCK);
 
-    //         // the first bbl in a function
-    //         if ((*it)->getBlock()==INSTR_FUNCTION(*it)->getFirst()) {
-    //             (*it)->getBlock()->addEntryEdge();
-    //         }
-
-    //         if ((*it)->getNextInstr()!=NULL) {
-    //             (*it)->getBlock()->addEdgeToHELL(ET_HELL);
-    //             (*it)->getNextInstr()->getBlock()->addEdgeFromHELL(ET_HELLMAYBE);
-    //             EDGELIST->addBBLEdge((*it)->getBlock(), (*it)->getNextInstr()->getBlock(), ET_DATALINK);
-    //             Report(RP_TRIVIAL, "Added Hell edge for data function %s\n", (*it)->getBlock()->getFunction()->getName());
-    //         }
-    //         else {
-    //             Report(RP_TRIVIAL, "Data instruction has no successor\n");
-    //         }
-    //         continue;
-    //     }
-
+        // 1: Normal instr
         if (!((*it)->isPCChangingClass())) {
             if ((*it)->hasFlag(BBL_END) && 
                 !(EDGELIST->edgeExistOrNot((*it)->getBlock(), BLOCKLIST->getNextBBL((*it)->getBlock())))) {
@@ -301,26 +237,58 @@ void SCInstrList::resolveTargets() {
             continue;
         }
 
-    //     if ((*it)->isReturnClass()) {
-    //         (*it)->getBlock()->setType(BT_RETURN);
-    //         continue;
-    //     }
+        // 2: Conditional branch instr
+        if ((*it)->isConditionalJmpClass()) {
+            SCBlock* bbl = (*it)->getBlock();
+            SCBlock* nbbl = BLOCKLIST->getNextBBL(bbl);
+            if (nbbl) {
+                EDGELIST->addBBLEdge(bbl, nbbl, ET_FALSE);
+            }
+            UINT32 addr = (*it)->getDest()->getOperand();
+            SCInstr *toIns = INSTRLIST->addrToInstr(addr);
+            if (toIns) {
+                EDGELIST->addBBLEdge(bbl, toIns->getBlock(), ET_TRUE);
+            }
+            // TODO: what if target ins is NULL
+            continue;
+        }
 
-    //     if ((*it)->isSyscallClass()) {
+        // 3: Unconditional jump instr
+        if ((*it)->isJmpClass()) {
+            UINT32 addr = (*it)->getDest()->getOperand();
+            SCInstr* toIns = INSTRLIST->addrToInstr(addr);
+            if (toIns) {
+                EDGELIST->addBBLEdge((*it)->getBlock(), toIns->getBlock(), ET_UNCOND);
+            }
+            // TODO: what if target ins is NULL
+            continue;
+        }
 
-    //         SCBlock* newbbl = NULL;
-    //         SCInstr* nextins = INSTRLIST->getNextInstr(*it);
-    //         if ((*it) == ((*it)->getBlock()->getLastInstr())) {
-    //             newbbl = (*it)->getBlock();
-    //         }
-    //         else {
-    //             if (nextins != nextins->getBlock()->getFirstInstr()) {
-    //             BLOCKLIST->divideBBLByInstr((*it)->getBlock(), nextins);
-    //             }
-    //             newbbl = (*it)->getBlock();
-    //         }
-    //         newbbl->setType(BT_SYSCALL);
-    //     }
+        // 4: Call instr
+        if ((*it)->isCallClass()) {
+            SCBlock* bbl = (*it)->getBlock();
+            SCBlock* nbbl = BLOCKLIST->getNextBBL(bbl);
+            UINT32 addr = (*it)->getDest()->getOperand();
+            SCInstr* tins = INSTRLIST->addrToInstr(addr);
+            if (tins) {
+                EDGELIST->addBBLEdge(bbl, tins->getBlock(), ET_FUNCALL);
+                if (nbbl) {
+                    EDGELIST->addBBLEdge(tins->getBlock(), nbbl, ET_RETURN);
+                }
+            }
+            if (nbbl) {
+                EDGELIST->addBBLEdge(bbl, nbbl, ET_FUNLINK);
+            }
+
+            continue;
+        }
+
+        // 5: Return instr: edge has been added in 4
+        if ((*it)->isReturnClass()) {
+            (*it)->getBlock()->setType(BT_RETURN);
+            continue;
+        }
+
     }
 }
 

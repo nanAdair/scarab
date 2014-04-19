@@ -66,3 +66,6 @@ Operand::Operand(int seg, HAVE_AUXILIARY_CODE oper, OPERAND_SIZE oper_size,
 	this->isDefault = isDef;
 }
 
+INT32 Operand::getOperand() {
+	return this->operand;
+}

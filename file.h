@@ -225,7 +225,7 @@ class SCSectionTable
     public:
         
         //SCSectionTable*
-        friend SCFileEXEC;
+        friend class SCFileEXEC;
 
         SCSectionTable(): content(NULL), size(0), number(0) {}
         ~SCSectionTable();

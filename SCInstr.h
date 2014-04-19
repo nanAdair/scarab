@@ -49,32 +49,23 @@ class SCInstr
 
         SCBlock* getBlock();
         UINT32 getAddr();
+        Operand* getDest();
 
 
         // ==== methods ====
         bool isPCChangingClass();
         bool isReturnClass();
         bool isCallClass();
-        bool isHaltClass();
-        bool isJumpClass();
-        bool isAddClass();
-        bool isAndClass();
-        bool isBranchClass();
-        bool isFPClass();
-        bool isLeaClass();
-        bool isLeaveClass();
+        bool isJmpClass();
+        bool isConditionalJmpClass();
         bool isLoopClass();
         bool isMovClass();
         bool isNOPClass();
-        bool isOPDIRClass();
-        bool isOPOFFClass();
         bool isPopClass();
         bool isPushClass();
         bool isSubClass();
-        bool isSyscallClass();
         
         bool isDataInstruction();
-        bool isConditionalInstr();
 
         bool isOnlyInstrInBBL();
 

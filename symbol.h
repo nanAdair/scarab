@@ -283,6 +283,7 @@ class SCSymbolListREL
 
         // interface for cfg
         SymListRELT getFunSymList();
+        const char* getSymNameByAddr(UINT32 addr);
 
 
     private:
