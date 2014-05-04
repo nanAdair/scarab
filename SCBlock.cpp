@@ -218,7 +218,7 @@ BlockListT SCBlockList::getBlockList() {
 
 
 
-void SCBlockList::createBBLList(SCInstrList instrList) {
+void SCBlockList::createBBLList() {
     InstrIterT instrIter;
     InstrListT instrs = INSTRLIST->getInstrList(); 
     SCBlock *bbl;
@@ -237,7 +237,7 @@ void SCBlockList::createBBLList(SCInstrList instrList) {
     }
 }
 
-void SCBlockList::markBBL(SCInstrList instrList) {
+void SCBlockList::markBBL() {
     SCInstr* startins = (INSTRLIST->getInstrList()).front();
     startins->setFlag(BBL_START);
     
@@ -331,6 +331,10 @@ SCBlock* SCBlockList::getNextBBL(SCBlock* bbl) {
         return NULL;
     }
     return *it;
+}
+
+BlockIterT SCBlockList::getIterByBBL(SCBlock* bbl) {
+    return std::find(p_bbls.begin(), p_bbls.end(), bbl);
 }
 
 void SCBlockList::deleteBBLs(SCBlock* first, SCBlock* last) {

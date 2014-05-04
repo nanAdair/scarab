@@ -78,6 +78,9 @@ SCEdgeList::SCEdgeList() {
 }
 
 SCEdge* SCEdgeList::addBBLEdge(SCBlock* from, SCBlock* to, ETYPE type) {
+    if (edgeExistOrNot(from, to, type))
+        return getBBLEdge(from, to, type);
+
     SCEdge *edge = new SCEdge();
     edge->setTo(to);
     edge->setFrom(from);

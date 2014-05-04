@@ -107,19 +107,19 @@ class SCBlockList
 
         BlockListT getBlockList();
 
-        void createBBLList(SCInstrList instrList);
-        void markBBL(SCInstrList instrList);
+        void createBBLList();
+        void markBBL();
         void divideBBLByInstr(SCBlock* bbl, SCInstr* ins);
 
         SCBlock* getPrevBBL(SCBlock* bbl);
         SCBlock* getNextBBL(SCBlock* bbl);
+        BlockIterT getIterByBBL(SCBlock* bbl);
         void deleteBBLs(SCBlock* first, SCBlock* last);
         // void removeBBLsFromList(SCBlock* first, SCBlock* last);
 
 
     private:
         BlockListT p_bbls;
-        BlockIterT getIterByBBL(SCBlock* bbl);
 
 }; /* -----  end of class SCBlockList  ----- */
 

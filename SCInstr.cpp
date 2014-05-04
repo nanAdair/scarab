@@ -388,3 +388,13 @@ void SCInstrList::deleteInstrs(SCInstr* first, SCInstr* last) {
     }
     p_instrs.erase(fit, lit);
 }
+
+void SCInstrList::constructCFG() {
+    BLOCKLIST->markBBL();
+    FUNLIST->markFunctions();
+    BLOCKLIST->createBBLList();
+    FUNLIST->createFunctionList();
+    this->funResolveExitBlock();
+    this->resolveTargets();
+    FUNLIST->resolveEntrylessFunction();
+}

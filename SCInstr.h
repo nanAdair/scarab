@@ -143,6 +143,7 @@ class SCInstrList
         void setInstrList(InstrListT &ins);
 
         // ==== methods ==== 
+        void constructCFG();
         void funResolveExitBlock();
         void resolveTargets();
         SCInstr* addrToInstr(UINT32 addr);

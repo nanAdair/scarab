@@ -50,6 +50,9 @@ int main(int argc, char *argv[])
     disassembleExecutableSection(obj_sec_list);
     
     InstrListT* insListPtr = INSTRLIST->getInstrListPtr();
+
+    /* Construct CFG */
+    INSTRLIST->constructCFG();
     
     /* UPM Init Stage */
     SCPatchList *patch_list;

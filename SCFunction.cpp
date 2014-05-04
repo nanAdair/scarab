@@ -24,6 +24,7 @@
 #include "SCInstr.h"
 #include "SCBlock.h"
 #include "symbol.h"
+#include "SCEdge.h"
 
 SCFunction::SCFunction() {
     this->f_flags = 0;
@@ -96,7 +97,7 @@ SCFunctionList* SCFunctionList::sharedFunctionList() {
     return _sharedFunctionList;
 }
 
-void SCFunctionList::createFunctionList(BlockListT blockList) {
+void SCFunctionList::createFunctionList() {
     BlockIterT bblIter;
     BlockListT bbls = BLOCKLIST->getBlockList();
     SCFunction *fun;
@@ -154,9 +155,26 @@ void SCFunctionList::deleteFunctions(SCFunction* first, SCFunction* last) {
 }
 
 void SCFunctionList::resolveEntrylessFunction() {
-    for (FunIterT it=p_funs.begin(); it!=p_funs.end(); ++it) {
-        if ((*it)->getEntryBlock()->getSucc().size() == 0) {
+    for (FunIterT fit=p_funs.begin(); fit!=p_funs.end(); ++fit) {
+        if ((*fit)->getEntryBlock()->getSucc().size() == 0) {
+            for (BlockIterT bit=BLOCKLIST->getIterByBBL((*fit)->getFirstBlock()); 
+                bit!=BLOCKLIST->getIterByBBL((*fit)->getLastBlock()); ++bit)
+            {
+                SCInstr* first = (*bit)->getFirstInstr();
+                SCInstr* second = INSTRLIST->getNextInstr(first);
+                // TODO: should restrict the oprand: push ebp; mov esp, ebp
+                if (first->isPushClass() && second->isMovClass())
+                {
+                    EDGELIST->addBBLEdge((*fit)->getEntryBlock(), (*bit), ET_ENTRY);
+                }
+            }
+        }
+    }
 
+    for (FunIterT fit=p_funs.begin(); fit!=p_funs.end(); ++fit) {
+        if ((*fit)->getEntryBlock()->getSucc().size() == 0) {
+            EDGELIST->addBBLEdge((*fit)->getEntryBlock(), (*fit)->getFirstBlock(), ET_ENTRY);
         }
     }
 }
+

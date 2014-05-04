@@ -68,7 +68,7 @@ class SCFunctionList {
     public:
         SCFunctionList();
         static SCFunctionList* sharedFunctionList();
-        void createFunctionList(BlockListT bbls);
+        void createFunctionList();
         void markFunctions();
         void deleteFunctions(SCFunction* first, SCFunction* last);
         void resolveEntrylessFunction();
