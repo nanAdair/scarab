@@ -26,6 +26,7 @@
 #include "type.h"
 #include "section.h"
 #include "version.h"
+#include "SCLog.h"
 
 class SCFileREL;
 class SCFileDYN;

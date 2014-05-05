@@ -223,18 +223,27 @@ void SCInstrList::setInstrList(InstrListT &ins) {
 
 void SCInstrList::funResolveExitBlock() {
     InstrIterT instrIter;
+    SCLog(RL_ONE, "Total instr: %d", p_instrs.size());
     for(instrIter=p_instrs.begin(); instrIter!=p_instrs.end(); ++instrIter) {
+
+        SCLog(RL_TWO, "%d: %s", std::distance(p_instrs.begin(), instrIter), (*instrIter)->assembly);
         if ((*instrIter)->isReturnClass()) {
+            // SCLog(RL_THREE, "Ret class: (%d)", std::distance(p_instrs.begin(), instrIter));
+            SCBlock* from = (*instrIter)->getBlock();
+            SCBlock* to = INSTR_FUNCTION(*instrIter)->getExitBlock();
             EDGELIST->addBBLEdge((*instrIter)->getBlock(), INSTR_FUNCTION(*instrIter)->getExitBlock(), ET_EXIT);
+            // SCLog(RL_THREE, "Ret class: edge added");
             continue;
         }
 
         if ((*instrIter)->isDataInstruction() && 
                 (*instrIter)->getBlock() == INSTR_FUNCTION(*instrIter)->getFirstBlock() && 
-                (*instrIter)->getBlock() == INSTR_FUNCTION(*instrIter)->getLastBlock()) {
+                (*instrIter)->getBlock() == INSTR_FUNCTION(*instrIter)->getLastBlock()) 
+        {
             EDGELIST->addBBLEdge((*instrIter)->getBlock(), INSTR_FUNCTION(*instrIter)->getExitBlock(), ET_EXIT);
 
-                }
+        }
+        SCLog(RL_TWO, "for end");
     }
 
     return;
@@ -390,11 +399,18 @@ void SCInstrList::deleteInstrs(SCInstr* first, SCInstr* last) {
 }
 
 void SCInstrList::constructCFG() {
+    SCLog(RL_ONE, "test1");
     BLOCKLIST->markBBL();
+    SCLog(RL_ONE, "test2");
     FUNLIST->markFunctions();
+    SCLog(RL_ONE, "test3");
     BLOCKLIST->createBBLList();
+    SCLog(RL_ONE, "test4");
     FUNLIST->createFunctionList();
+    SCLog(RL_ONE, "test5");
     this->funResolveExitBlock();
+    SCLog(RL_ONE, "test6");
     this->resolveTargets();
+    SCLog(RL_ONE, "test7");
     FUNLIST->resolveEntrylessFunction();
 }

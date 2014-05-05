@@ -159,6 +159,7 @@ void SCSymbolListREL::updateSymbolValue(SCSectionList *sl)
 {
     vector<SCSymbol*>::iterator it;
     for (it = this->sym_list.begin(); it != this->sym_list.end(); ++it) {
+	// SCLog(RL_ONE, "%s\n", (*it)->getSymbolName());
         if ((*it)->getSymbolShndx() != SHN_ABS && (*it)->getSymbolShndx() != SHN_UNDEF){
             (*it)->setSymbolValue(0);
             (*it)->setSymbolShndx((*it)->getSymbolSec()->getSecIndex());
@@ -172,8 +173,10 @@ void SCSymbolListREL::updateSymbolValue(SCSectionList *sl)
                 (*it)->setSymbolShndx((*it)->getSymbolSec()->getSecIndex());
             }
             else if (!strcmp((char *)(*it)->getSymbolName(), INIT_ARRAY_END)) {
+                // SCLog(RL_ONE, "array section name: %s", INIT_ARRAY_SECTION_NAME);
                 SCSection *init_array = sl->getSectionByName(INIT_ARRAY_SECTION_NAME);
                 (*it)->setSymbolSec(init_array);
+                // SCLog(RL_ONE, "array_end:%x", init_array);
                 (*it)->setSymbolValue(init_array->getSecDatasize());
                 (*it)->setSymbolShndx((*it)->getSymbolSec()->getSecIndex());
             }

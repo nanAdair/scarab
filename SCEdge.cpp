@@ -79,7 +79,13 @@ SCEdgeList::SCEdgeList() {
 
 SCEdge* SCEdgeList::addBBLEdge(SCBlock* from, SCBlock* to, ETYPE type) {
     if (edgeExistOrNot(from, to, type))
+    {
+        // if (type == ET_EXIT)
+        //     SCLog(RL_ONE, "exit edge existed!");
         return getBBLEdge(from, to, type);
+    }
+
+    // SCLog(RL_ONE, "addBBLEdge");
 
     SCEdge *edge = new SCEdge();
     edge->setTo(to);
@@ -116,7 +122,8 @@ bool SCEdgeList::edgeExistOrNot(SCEdge* edge) {
 }
 
 bool SCEdgeList::edgeExistOrNot(SCBlock* from, SCBlock* to) {
-    for(EdgeIterT it=(from->getSucc()).begin(); it!=(from->getSucc()).end(); ++it) {
+    EdgeListT succ = from->getSucc();
+    for(EdgeIterT it=succ.begin(); it!=succ.end(); ++it) {
         if (((*it)->getFrom()==from) && ((*it)->getTo()==to))
             return true;
     }
@@ -124,13 +131,17 @@ bool SCEdgeList::edgeExistOrNot(SCBlock* from, SCBlock* to) {
 }
 
 bool SCEdgeList::edgeExistOrNot(SCBlock* from, SCBlock*to, ETYPE type) {
+    SCLog(RL_ONE, "edge exist or not, from(%x), to(%x)", from, to);
     if(getBBLEdge(from, to, type) != NULL)
         return true;
     return false;
 }
 
 SCEdge* SCEdgeList::getBBLEdge(SCBlock* from, SCBlock* to, ETYPE type) {
-    for(EdgeIterT it=(from->getSucc()).begin(); it!=(from->getSucc()).end(); ++it) {
+    // SCLog(RL_ONE, "getBBLEdge from(%x), to(%x), from->succ->size(%d)", from, to, from->getSucc().size());
+    EdgeListT succ = from->getSucc();
+    for(EdgeIterT it=succ.begin(); it!=succ.end(); ++it) 
+    {
         if (((*it)->getFrom()==from) && ((*it)->getTo()==to) && 
             ((*it)->getType()== type))
             return *it;

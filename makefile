@@ -1,5 +1,5 @@
-main: main.o section.o file.o symbol.o version.o relocation.o disasm.o dis-table.o upm.o operand.o SCInstr.o SCBlock.o SCFunction.o SCEdge.o 
-	g++ -o main main.o section.o file.o symbol.o version.o relocation.o disasm.o dis-table.o upm.o operand.o SCInstr.o SCBlock.o SCFunction.o SCEdge.o
+main: main.o section.o file.o symbol.o version.o relocation.o disasm.o dis-table.o upm.o operand.o SCInstr.o SCBlock.o SCFunction.o SCEdge.o SCLog.o
+	g++ -o main main.o section.o file.o symbol.o version.o relocation.o disasm.o dis-table.o upm.o operand.o SCInstr.o SCBlock.o SCFunction.o SCEdge.o SCLog.o
 main.o: main.cc
 	g++ -c main.cc
 file.o: file.cc file.h
@@ -28,5 +28,7 @@ SCFunction.o: SCFunction.h SCFunction.cpp type.h
 	g++ -c SCFunction.cpp
 SCEdge.o: SCEdge.h SCEdge.cpp type.h
 	g++ -c SCEdge.cpp
+SCLog.o: SCLog.h SCLog.cpp
+	g++ -c SCLog.cpp
 clean:
 	rm -rf main *.o *~

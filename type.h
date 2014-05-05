@@ -20,7 +20,7 @@
 #define TYPE_H
 
 #include <list>
-
+#include "SCLog.h"
 
 using namespace std;
 

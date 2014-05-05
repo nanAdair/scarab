@@ -28,6 +28,7 @@
 #include "upm.h"
 #include "SCInstr.h"
 #include "SCBlock.h"
+#include "SCLog.h"
 
 void binaryAbstraction(SCSectionList *, SCSymbolListREL *, SCRelocationList *, char *[]);
 void patchSecContent(SCSectionList *sl, SCSymbolListREL *sym_list, char *argv[]);

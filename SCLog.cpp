@@ -47,16 +47,14 @@ static const char *getTimestamp() {
  *  Should be called only after level has been validated by the REPORT macro.
  */
 void SCLog(int level, const char *fmt, ...) {
-
-
     // print the report message
-    const char *space = "            ";
     va_list args;
     va_start(args, fmt);
-    fprintf(stdout, "[%s][%d] ", getTimestamp(), level);
-    // if (level > RP_DETAIL) {
-    //     fprintf(stdout, space + 18 - 2 * level);	// indent
-    // }
+    fprintf(stdout, "[%s]", getTimestamp());
+    for(int i=1; i<level; ++i)
+        fprintf(stdout, "\t");
+    fprintf(stdout, "[%d] ", level);
+    
     vfprintf(stdout, fmt, args);
     fprintf(stdout, "\n");
     va_end(args);
