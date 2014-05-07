@@ -28,6 +28,7 @@
 #include "upm.h"
 #include "SCInstr.h"
 #include "SCBlock.h"
+#include "SCEdge.h"
 #include "SCLog.h"
 
 void binaryAbstraction(SCSectionList *, SCSymbolListREL *, SCRelocationList *, char *[]);
@@ -152,14 +153,49 @@ void obfPatch(InstrListT* instr_list, INSTRUCTION *dumpInstr)
     }
 }
 
+int caculateJumpDisplacement(SCInstr *instr);
+void updatePCRelativeJumps(InstrListT *instr_list)
+{
+    InstrIterT it;
+    bool change = true;
+    while (change) {
+        change = false;
+        int numChanged = 0;
+        for (it = instr_list->begin(); it != instr_list->end(); it++) {
+            if ((*it)->instr_class == CLASS_JE || (*it)->instr_class == CLASS_JMP) {
+                /* caculate the offset based on the cfg*/
+                int offset;
+                cout << numChanged++ << endl;
+                offset = caculateJumpDisplacement(*it);
+            }
+        }
+    }
+}
+
+/* TODO: bbl succ list error*/
+int caculateJumpDisplacement(SCInstr *instr)
+{
+    SCBlock *cur_block = instr->i_block;
+
+    EdgeIterT it;
+    cout << hex << "Current block is: " << cur_block << endl;
+    for (it = cur_block->getSucc().begin(); it != cur_block->getSucc().end(); it++) {
+        cout << hex << "source block " <<(*it)->getFrom() << endl;
+    }
+}
+
 void finalizeMemory(SCSectionList *sl, InstrListT* instr_list, SCPatchList *patch_list, SCInstr *dumpInstr)
 {
+    //InstrRelinkBasedOnBBL();
+
     int change = 0;
     
     do {
         sl->updateSectionSize(instr_list);
         sl->allocateSectionsAddress(0);
         sl->updateInstrAddress(instr_list);
+
+        updatePCRelativeJumps(instr_list);
         
         change = patch_list->apply();
         cout << change << endl;
