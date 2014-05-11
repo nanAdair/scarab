@@ -131,7 +131,7 @@ bool SCEdgeList::edgeExistOrNot(SCBlock* from, SCBlock* to) {
 }
 
 bool SCEdgeList::edgeExistOrNot(SCBlock* from, SCBlock*to, ETYPE type) {
-    SCLog(RL_ONE, "edge exist or not, from(%x), to(%x)", from, to);
+    // SCLog(RL_ONE, "edge exist or not, from(%x), to(%x)", from, to);
     if(getBBLEdge(from, to, type) != NULL)
         return true;
     return false;

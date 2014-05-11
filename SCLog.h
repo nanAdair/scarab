@@ -25,20 +25,16 @@
 #include <cstdarg>
 #include <ctime>
 
-
+#define RL_ZERO		0
 #define RL_ONE		1
 #define RL_TWO		2
 #define RL_THREE	3
 #define RL_FOUR		4
 #define RL_FIVE		5
 
-/*
- *  report(level,fmt,args) -- issue report message of the given level.
- *
- *  Should be called only after level has been validated by the REPORT macro.
- */
 void SCLog(int level, const char *fmt, ...);
 
+// void SCLogSer(int part, const char *fmt, ...);
 
 
 #endif

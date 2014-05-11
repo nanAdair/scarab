@@ -258,7 +258,8 @@ void disassembleExecutableSection(SCSectionList *obj_sec_list)
 	    UINT32 dataSize = (*itr)->getSecDatasize(), start = 0;
 
 	    while (1){
-		INSTRUCTION *instr = (INSTRUCTION *)malloc(sizeof(INSTRUCTION));
+		// INSTRUCTION *instr = (INSTRUCTION *)malloc(sizeof(INSTRUCTION));
+        SCInstr* instr = new SCInstr();
 		if (start + (INT32)MAX_INSTRUCTION_SIZE > dataSize){
 		    size = dataSize - start + 1;
 		    if ((INT32)MAX_INSTRUCTION_SIZE > dataSize)

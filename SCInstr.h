@@ -39,6 +39,7 @@ class SCInstr
         SCInstr();
         SCInstr(struct SCINSTR_INTERNAL_STRUCT tmp);
         ~SCInstr();
+        static int GlobalID;
 
         // ==== getters and setters ====
         void setFlag(IFLAG flag);
@@ -68,6 +69,11 @@ class SCInstr
         bool isDataInstruction();
 
         bool isOnlyInstrInBBL();
+
+        int getPos();
+        void serialize(const char* prefix = "");
+
+        int i_id;
 
         /* prefixes */
         INT8 lockAndRepeat;
@@ -153,8 +159,11 @@ class SCInstrList
 
         SCInstr* getPrevInstr(SCInstr* ins);
         SCInstr* getNextInstr(SCInstr* ins);
+        int getInstrPos(SCInstr* ins);
 
         void deleteInstrs(SCInstr* first, SCInstr* last);
+
+        void serialize();
 
 
 	private: 

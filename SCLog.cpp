@@ -40,23 +40,20 @@ static const char *getTimestamp() {
 }
 
 
-
-/*
- *  report(level,fmt,args) -- issue report message of the given level.
- *
- *  Should be called only after level has been validated by the REPORT macro.
- */
 void SCLog(int level, const char *fmt, ...) {
     // print the report message
     va_list args;
     va_start(args, fmt);
-    fprintf(stdout, "[%s]", getTimestamp());
-    for(int i=1; i<level; ++i)
-        fprintf(stdout, "\t");
-    fprintf(stdout, "[%d] ", level);
+
+    if (level != RL_ZERO)
+    {
+        fprintf(stdout, "[%s]", getTimestamp());
+        for(int i=1; i<level; ++i)
+            fprintf(stdout, "\t");
+        fprintf(stdout, "[%d] ", level);
+    }
     
     vfprintf(stdout, fmt, args);
     fprintf(stdout, "\n");
     va_end(args);
 }
-

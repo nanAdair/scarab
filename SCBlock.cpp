@@ -18,17 +18,19 @@
 #include "SCBlock.h"
 #include <algorithm>
 #include <iterator>
+#include <cstring>
 
 #include "SCInstr.h"
 #include "SCEdge.h"
 #include "SCFunction.h"
 
+int SCBlock::GlobalID = 0;
 
 SCBlock::SCBlock() {
     b_type = BT_INVALID;
     b_flags = 0;
     b_first = b_last = NULL;
-    b_id = 0;   // TODO: global increase;
+    b_id = ++this->GlobalID;
 }
 SCBlock::~SCBlock() {
     for(EdgeIterT it=b_pred.begin();it!=b_pred.end();++it) {
@@ -186,6 +188,30 @@ void SCBlock::removeSuccEdge(SCEdge* edge) {
     }
 }
 
+int SCBlock::getPos() {
+    return BLOCKLIST->getBBLPos(this);
+}
+
+void SCBlock::serialize(const char* prefix) {
+    SCLog(RL_ZERO, "%s====SCBlock%d(%x)====", prefix, BLOCKLIST->getBBLPos(this), this);
+    SCLog(RL_ZERO, "First instr: %d", INSTRLIST->getInstrPos(b_first));
+    SCLog(RL_ZERO, "Last instr: %d", INSTRLIST->getInstrPos(b_last));
+    
+    char np[100];
+    strcpy(np, prefix);
+    strcat(np, "\t");
+    b_first->serialize(np);
+
+    if (b_first != b_last) {
+        SCInstr* ins = b_first;
+        while((ins=INSTRLIST->getNextInstr(ins)) != b_last) {
+            ins->serialize(np);
+        }
+        b_last->serialize(np);
+    }
+
+    SCLog(RL_ZERO, "%s====END=SCBlock%d(%x)====\n", prefix, BLOCKLIST->getBBLPos(this), this);
+}
 
 // ==== SCBlockList ====
 static SCBlockList* _sharedBlockList = NULL;
@@ -219,20 +245,28 @@ BlockListT SCBlockList::getBlockList() {
 
 
 void SCBlockList::createBBLList() {
-    InstrIterT instrIter;
+    InstrIterT iit;
     InstrListT instrs = INSTRLIST->getInstrList(); 
     SCBlock *bbl;
-    for(instrIter=instrs.begin(); instrIter!=instrs.end(); ++instrIter) {
-        if((*instrIter)->hasFlag(BBL_START)) {
+    for(iit=instrs.begin(); iit!=instrs.end(); ++iit) {
+        // if ((*iit)->address == 0x804827a) {
+        //     SCLog(RL_ONE, "BINGO! out");
+        //     (*iit)->serialize();
+        // }
+
+        if((*iit)->hasFlag(BBL_START)) {
+            // if ((*iit)->address == 0x804827a)
+            //     SCLog(RL_ONE, "BINGO!");
+
             bbl = new SCBlock();
-            bbl->setFirstInstr(*instrIter);
-            bbl->setLastInstr(*instrIter);
+            bbl->setFirstInstr(*iit);
+            bbl->setLastInstr(*iit);
             (this->p_bbls).push_back(bbl);
         }
-        else if((*instrIter)->hasFlag(BBL_END)) {
-            bbl->setLastInstr(*instrIter);
+        else if((*iit)->hasFlag(BBL_END)) {
+            bbl->setLastInstr(*iit);
         }
-        (*instrIter)->setBlock(bbl); 
+        (*iit)->setBlock(bbl); 
 
     }
 }
@@ -241,24 +275,24 @@ void SCBlockList::markBBL() {
     SCInstr* startins = (INSTRLIST->getInstrList()).front();
     startins->setFlag(BBL_START);
     
-    InstrIterT instrIter, nextInstrIter;
+    InstrIterT iit, niit;
     InstrListT instrs = INSTRLIST->getInstrList();
-    for(instrIter=instrs.begin(); instrIter!=instrs.end(); ++instrIter) {
-        if ((*instrIter)->isPCChangingClass() || (*instrIter)->isDataInstruction()) {
-            (*instrIter) -> setFlag(BBL_END);
-            nextInstrIter = instrIter;
-            ++nextInstrIter;
-            if (nextInstrIter != instrs.end()) {
-                (*nextInstrIter) -> setFlag(BBL_START);
+    for(iit=instrs.begin(); iit!=instrs.end(); ++iit) {
+        if ((*iit)->isPCChangingClass() || (*iit)->isDataInstruction()) {
+            (*iit) -> setFlag(BBL_END);
+            niit = iit;
+            ++niit;
+            if (niit != instrs.end()) {
+                (*niit) -> setFlag(BBL_START);
             }
         }
 
-        nextInstrIter = instrIter;
-        ++nextInstrIter;
-        if (nextInstrIter == instrs.end()) {
+        niit = iit;
+        ++niit;
+        if (niit == instrs.end()) {
             // Last instr
-            (*instrIter) -> setFlag(BBL_END);
-            (*instrIter) -> setFlag(FUN_END);
+            (*iit) -> setFlag(BBL_END);
+            (*iit) -> setFlag(FUN_END);
             break;
         }
     }
@@ -354,6 +388,11 @@ void SCBlockList::deleteBBLs(SCBlock* first, SCBlock* last) {
     p_bbls.erase(fit, lit);
 }
 
+int SCBlockList::getBBLPos(SCBlock* bbl) {
+    BlockIterT bit = std::find(p_bbls.begin(), p_bbls.end(), bbl);
+    return std::distance(p_bbls.begin(), bit);
+}
+
 // void SCBlockList::removeBBLsFromList(SCBlock* first, SCBlock* last) {
 //     if (!first || !last)
 //         return;
@@ -364,3 +403,13 @@ void SCBlockList::deleteBBLs(SCBlock* first, SCBlock* last) {
 //     ++lit;
 //     p_bbls.erase(fit, lit);
 // }
+
+void SCBlockList::serialize(const char *prefix) // prefix default to ""
+{
+    int i=0;
+    for (BlockIterT bit=p_bbls.begin(); bit!=p_bbls.end(); ++bit)
+    {
+        // SCLog(RL_ONE, "BIT %d:", ++i);
+        (*bit)->serialize(prefix);
+    }
+}

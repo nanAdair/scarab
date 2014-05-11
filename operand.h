@@ -20,6 +20,8 @@ class Operand{
 
 		INT32 getOperand();
 
+		void serialize(const char* prefix);
+
 	    /* segment */
 	    INT8 segment;
 	    /* Store register number or immediate */

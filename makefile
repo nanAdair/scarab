@@ -20,7 +20,7 @@ upm.o: upm.h upm.cc
 	g++ -c upm.cc
 operand.o: type.h dis-table.h
 	g++ -c operand.cc
-SCInstr.o: type.h SCInstr.h SCInstr.cpp
+SCInstr.o: type.h SCInstr.h SCInstr.cpp operand.h
 	g++ -c SCInstr.cpp
 SCBlock.o: SCBlock.h SCBlock.cpp type.h
 	g++ -c SCBlock.cpp

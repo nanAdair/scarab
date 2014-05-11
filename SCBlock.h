@@ -43,6 +43,7 @@ class SCBlock
     public:
         SCBlock ();                             /* constructor */
         ~SCBlock();
+        static int GlobalID;
 
         // getters and setters
 
@@ -77,6 +78,9 @@ class SCBlock
         bool predBBLExistOrNot(SCBlock* bbl);
         void removePredEdge(SCEdge* edge);
         void removeSuccEdge(SCEdge* edge);
+
+        int getPos();
+        void serialize(const char* prefix);
 
 
     private:
@@ -115,7 +119,9 @@ class SCBlockList
         SCBlock* getNextBBL(SCBlock* bbl);
         BlockIterT getIterByBBL(SCBlock* bbl);
         void deleteBBLs(SCBlock* first, SCBlock* last);
+        int getBBLPos(SCBlock* bbl);
         // void removeBBLsFromList(SCBlock* first, SCBlock* last);
+        void serialize(const char* prefix="");
 
 
     private:
