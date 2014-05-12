@@ -119,37 +119,6 @@ void SCBlock::moveSuccEdgesToBBL(SCBlock* to) {
     this->b_succ.clear();
 }
 
-// void SCBlock::addEntryEdge() {
-//     SCBlock* firstBBL = getFunction()->getEntryBlock();
-//     if (getEdgeFromBBL(firstBBL)!=NULL) {
-//         INSTRLIST->addBBLEdge(firstBBL, this, ET_ENTRY);
-//     }
-// }
-
-// SCEdge* SCBlock::getEdgeFromBBL(SCBlock* from) {
-//     for(EdgeIterT it=from->getSucc().begin(); it!=(from->getSucc()).end(); ++it) {
-//         if ((*it)->getTo() == this)
-//             return (*it);
-//     }
-//     return NULL;
-// }
-
-// SCEdge* SCBlock::getEdgeToBBL(SCBlock* to) {
-//     for(EdgeIterT it=(to->getPred()).begin(); it!=(to->getPred()).end(); ++it) {
-//         if ((*it)->getFrom() == this)
-//             return (*it);
-//     }
-//     return NULL;
-// }
-
-// void SCBlock::addEdgeToBBL(SCBlock* to, UINT8 type) {
-//     EDGELIST->addBBLEdge(this, to, type);
-// }
-
-// void SCBlock::addEdgeFromBBL(SCBlock* from, UINT8 type) {
-//     EDGELIST->addBBLEdge(from, this, type);
-// }
-
 void SCBlock::addSuccEdge(SCEdge* e) {
     b_succ.push_back(e);
 }
@@ -193,24 +162,42 @@ int SCBlock::getPos() {
 }
 
 void SCBlock::serialize(const char* prefix) {
-    SCLog(RL_ZERO, "%s====SCBlock%d(%x)====", prefix, BLOCKLIST->getBBLPos(this), this);
-    SCLog(RL_ZERO, "First instr: %d", INSTRLIST->getInstrPos(b_first));
-    SCLog(RL_ZERO, "Last instr: %d", INSTRLIST->getInstrPos(b_last));
-    
+    SCLog(RL_ZERO, "%s====SCBlock%d(0x%x)====", prefix, BLOCKLIST->getBBLPos(this), this);
+    SCLog(RL_ZERO, "%sFirst instr: %d", prefix, INSTRLIST->getInstrPos(b_first));
+    SCLog(RL_ZERO, "%sLast instr: %d", prefix, INSTRLIST->getInstrPos(b_last));
+
+    // show neighbors, both pred and succ
+    char neighbor[50] = {0};
+    sprintf(neighbor, "Pred(%d): ", b_pred.size());
+    for(EdgeIterT eit=b_pred.begin(); eit!=b_pred.end(); ++eit) {
+        sprintf(neighbor+strlen(neighbor), "%d ", (*eit)->getFrom()->getPos());
+    }
+    SCLog(RL_ZERO, "%s%s", prefix, neighbor);
+
+    neighbor[0] = 0;
+    sprintf(neighbor, "Succ(%d): ", b_succ.size());
+    for(EdgeIterT eit=b_succ.begin(); eit!=b_succ.end(); ++eit) {
+        sprintf(neighbor+strlen(neighbor), "%d ", (*eit)->getTo()->getPos());
+    }
+    SCLog(RL_ZERO, "%s%s", prefix, neighbor);
+
     char np[100];
     strcpy(np, prefix);
     strcat(np, "\t");
-    b_first->serialize(np);
 
+    // show all the instrs within this bbl
+    b_first->serialize(np);
+    SCLog(RL_ZERO, "");
     if (b_first != b_last) {
         SCInstr* ins = b_first;
         while((ins=INSTRLIST->getNextInstr(ins)) != b_last) {
             ins->serialize(np);
+            SCLog(RL_ZERO, "");
         }
         b_last->serialize(np);
     }
 
-    SCLog(RL_ZERO, "%s====END=SCBlock%d(%x)====\n", prefix, BLOCKLIST->getBBLPos(this), this);
+    SCLog(RL_ZERO, "%s====END=SCBlock%d(0x%x)====", prefix, BLOCKLIST->getBBLPos(this), this);
 }
 
 // ==== SCBlockList ====
@@ -371,6 +358,18 @@ BlockIterT SCBlockList::getIterByBBL(SCBlock* bbl) {
     return std::find(p_bbls.begin(), p_bbls.end(), bbl);
 }
 
+void SCBlockList::addBBLBeforeBBL(SCBlock* bbl, SCBlock* pivot) {
+    // TODO
+}
+
+void SCBlockList::addBBLAfterBBL(SCBlock* bbl, SCBlock* pivot) {
+    // TODO
+}
+
+void SCBlockList::addBBLBack(SCBlock* bbl) {
+    // TODO
+}
+
 void SCBlockList::deleteBBLs(SCBlock* first, SCBlock* last) {
     if (!first || !last)
         return;
@@ -411,5 +410,6 @@ void SCBlockList::serialize(const char *prefix) // prefix default to ""
     {
         // SCLog(RL_ONE, "BIT %d:", ++i);
         (*bit)->serialize(prefix);
+        SCLog(RL_ZERO, "");
     }
 }

@@ -153,7 +153,21 @@ void obfPatch(InstrListT* instr_list, INSTRUCTION *dumpInstr)
     }
 }
 
-int caculateJumpDisplacement(SCInstr *instr);
+/* TODO: bbl succ list error*/
+int caculateJumpDisplacement(SCInstr *instr)
+{
+    SCInstr* target = instr->getBranchTarget();
+    return INSTRLIST->getOffset(instr, target);
+
+    // SCBlock* cur_block = instr->i_block;
+
+    // EdgeIterT it;
+    // cout << hex << "Current block is: " << cur_block << endl;
+    // for (it = cur_block->getSucc().begin(); it != cur_block->getSucc().end(); it++) {
+    //     cout << hex << "source block " <<(*it)->getFrom() << endl;
+    // }
+}
+
 void updatePCRelativeJumps(InstrListT *instr_list)
 {
     InstrIterT it;
@@ -163,24 +177,17 @@ void updatePCRelativeJumps(InstrListT *instr_list)
         int numChanged = 0;
         for (it = instr_list->begin(); it != instr_list->end(); it++) {
             if ((*it)->instr_class == CLASS_JE || (*it)->instr_class == CLASS_JMP) {
-                /* caculate the offset based on the cfg*/
-                int offset;
-                cout << numChanged++ << endl;
-                offset = caculateJumpDisplacement(*it);
+                /* patch address based on the cfg*/
+                Operand* dest = (*it)->dest;
+                if(dest->operand_size == RELATIVE_ADDRESS_SHORT) {
+                    int offset;
+                    offset = caculateJumpDisplacement(*it);
+                    SCLog(RL_ONE, "CFG based patch: instr(%d), old disp(0x%x), new disp(0x%x)", (*it)->getPos(), dest->operand, offset);
+                    dest->operand = offset;
+                }
+                
             }
         }
-    }
-}
-
-/* TODO: bbl succ list error*/
-int caculateJumpDisplacement(SCInstr *instr)
-{
-    SCBlock *cur_block = instr->i_block;
-
-    EdgeIterT it;
-    cout << hex << "Current block is: " << cur_block << endl;
-    for (it = cur_block->getSucc().begin(); it != cur_block->getSucc().end(); it++) {
-        cout << hex << "source block " <<(*it)->getFrom() << endl;
     }
 }
 

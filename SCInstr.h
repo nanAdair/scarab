@@ -51,6 +51,7 @@ class SCInstr
         SCBlock* getBlock();
         UINT32 getAddr();
         Operand* getDest();
+        INT32 getSize();
 
 
         // ==== methods ====
@@ -71,6 +72,8 @@ class SCInstr
         bool isOnlyInstrInBBL();
 
         int getPos();
+        SCInstr* getBranchTarget(); // Only non-NULL when it is intrafunction jump class
+        void updateLength();
         void serialize(const char* prefix = "");
 
         int i_id;
@@ -97,6 +100,7 @@ class SCInstr
         INT8 s;        // sign or not
         /* address */
         INT32 address;
+        /* Once disassembly, store the next instr*/
         INT32 final_address;
         /* instruction type */
         INT8 type;
@@ -160,6 +164,7 @@ class SCInstrList
         SCInstr* getPrevInstr(SCInstr* ins);
         SCInstr* getNextInstr(SCInstr* ins);
         int getInstrPos(SCInstr* ins);
+        int getOffset(SCInstr* first, SCInstr* second);
 
         void deleteInstrs(SCInstr* first, SCInstr* last);
 

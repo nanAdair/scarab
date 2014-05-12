@@ -80,12 +80,8 @@ SCEdgeList::SCEdgeList() {
 SCEdge* SCEdgeList::addBBLEdge(SCBlock* from, SCBlock* to, ETYPE type) {
     if (edgeExistOrNot(from, to, type))
     {
-        // if (type == ET_EXIT)
-        //     SCLog(RL_ONE, "exit edge existed!");
         return getBBLEdge(from, to, type);
     }
-
-    // SCLog(RL_ONE, "addBBLEdge");
 
     SCEdge *edge = new SCEdge();
     edge->setTo(to);

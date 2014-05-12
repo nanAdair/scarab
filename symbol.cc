@@ -231,11 +231,18 @@ SymListRELT SCSymbolListREL::getFunSymList() {
 }
 
 const char* SCSymbolListREL::getSymNameByAddr(UINT32 addr) {
+    SymListRELT funSyms;
     for(SymIterRELT it=sym_list.begin(); it!=sym_list.end(); ++it) {
+        if ((*it)->getSymbolType() == STT_FUNC) {
+            funSyms.push_back(*it);
+        }
+    }
+    
+    for(SymIterRELT it=funSyms.begin(); it!=funSyms.end(); ++it) {
         if ((*it)->getSymbolValue() == addr)
             return (char*)((*it)->getSymbolName());
     }
-    return "";
+    return "UNDEFINED";
 }
 
 // ========== SCSymbolDYN ==========
