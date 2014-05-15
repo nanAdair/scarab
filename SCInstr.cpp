@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <iterator>
 #include <cstring>
+#include <iostream>
 
 #include "SCFunction.h"
 #include "SCBlock.h"
@@ -423,6 +424,7 @@ void SCInstrList::addInsAfterIns(SCInstr* ins, SCInstr* pivot) {
 
     ++pit;
     p_instrs.insert(pit, ins);
+    std::cout << "here comes the instr" << std::endl;
     mapAddrToIns(ins);
 }
 
@@ -531,5 +533,5 @@ void SCInstrList::constructCFG() {
     FUNLIST->resolveEntrylessFunction();
 
     // BLOCKLIST->serialize();
-    FUNLIST->serialize();
+    //FUNLIST->serialize();
 }

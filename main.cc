@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
     
     /* Address Patching and Date Written Back */
     finalizeMemory(obj_sec_list, insListPtr, patch_list, dumpInstr);
-    
+
     /* Info Creation */
     patchSecContent(obj_sec_list, sym_list, argv);
     
@@ -120,10 +120,10 @@ INSTRUCTION *obfModify(InstrListT* inss)
             break;
     }
     
-    cout << hex << (*it)->address << endl;
+    cout << "The address to be inserted: " << hex << (*it)->address << endl;
     dumpInstr->secType = (*it)->secType;
 
-    INSTRLIST->addInsAfterIns(*it, dumpInstr);
+    INSTRLIST->addInsAfterIns(dumpInstr, *it);
     
     return dumpInstr;
 }
@@ -208,10 +208,10 @@ void finalizeMemory(SCSectionList *sl, InstrListT* instr_list, SCPatchList *patc
         cout << change << endl;
     } while (change > 0);
     
-    if (dumpInstr) {
-        obfPatch(instr_list, dumpInstr);
-        cout << "obf patch here " << endl;
-    }
+    //if (dumpInstr) {
+        //obfPatch(instr_list, dumpInstr);
+        //cout << "obf patch here " << endl;
+    //}
     sl->updateSectionDataFromInstr(instr_list);
 }
 
