@@ -69,3 +69,15 @@ Operand::Operand(int seg, HAVE_AUXILIARY_CODE oper, OPERAND_SIZE oper_size,
 INT32 Operand::getOperand() {
 	return this->operand;
 }
+
+void Operand::serialize(const char* prefix) {
+	SCLog(RL_ZERO, "%s====Operand(%x)====", prefix, this);
+    
+    SCLog(RL_ZERO, "%ssegment: 0x%x", prefix, segment);
+    SCLog(RL_ZERO, "%soperand: 0x%x", prefix, operand);
+    SCLog(RL_ZERO, "%soperand_size: %d", prefix, operand_size);
+    SCLog(RL_ZERO, "%sdisplacement: 0x%x", prefix, displacement);
+    SCLog(RL_ZERO, "%sdisplacement_size: %d", prefix, displacement_size);
+
+    SCLog(RL_ZERO, "%s====END=Operand(%x)====", prefix, this);
+}

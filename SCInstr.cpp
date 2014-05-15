@@ -18,13 +18,16 @@
 #include "SCInstr.h"
 #include <algorithm>
 #include <iterator>
+#include <cstring>
 
 #include "SCFunction.h"
 #include "SCBlock.h"
 #include "SCEdge.h"
 #include "operand.h"
 
- SCInstr::SCInstr() :
+int SCInstr::GlobalID = 0;
+
+SCInstr::SCInstr() :
      dest(NULL),
      src1(NULL),
      src2(NULL),
@@ -32,9 +35,12 @@
      assembly(NULL),
      ret_machineCode(NULL),
      mnemonic(NULL),
-     binary(NULL) {}
+     binary(NULL) 
+{
+    this->i_id = ++this->GlobalID;
+}
 
- SCInstr::~SCInstr() {
+SCInstr::~SCInstr() {
     //delete dest, src1, src2,src3;
     //delete assembly, ret_machineCode, mnemonic;
     //delete binary;
@@ -56,10 +62,11 @@
         //delete binary;
  }
 
- SCInstr::SCInstr(SCINSTR_INTERNAL_STRUCT tmp) {
+SCInstr::SCInstr(SCINSTR_INTERNAL_STRUCT tmp) {
 
     i_flags = 0;
     i_block = NULL;
+    i_id = ++this->GlobalID;
     
     this->lockAndRepeat = tmp.lockAndRepeat;
     this->segmentOverride = tmp.segmentOverride;
@@ -123,6 +130,10 @@ UINT32 SCInstr::getAddr() {
 
 Operand* SCInstr::getDest() {
     return this->dest;
+}
+
+INT32 SCInstr::getSize() {
+    return this->size;
 }
 
 // ==== methods ====
@@ -192,6 +203,60 @@ bool SCInstr::isOnlyInstrInBBL() {
     return true;
 }
 
+int SCInstr::getPos() {
+    return INSTRLIST->getInstrPos(this);
+}
+
+SCInstr* SCInstr::getBranchTarget() {
+    if (dest && (dest->type==OPERAND_IMMEDIATE)) {
+        return INSTRLIST->addrToInstr(final_address);
+    }
+    return NULL;
+}
+
+void SCInstr::updateLength() {
+    // TODO
+}
+
+void SCInstr::serialize(const char *prefix) {
+    SCLog(RL_ZERO, "%s====SCInstr%d(0x%x)====", prefix, INSTRLIST->getInstrPos(this), this);
+    SCLog(RL_ZERO, "%s%x: %s(%x)", prefix, this->address, this->assembly, this->binary);
+
+    char f[100] = {0};
+    if (hasFlag(BBL_START))
+        strcat(f, "BBL_START ");
+    if (hasFlag(BBL_END))
+        strcat(f, "BBL_END ");
+    if (f[0])
+        SCLog(RL_ZERO, "%sflags: %s", prefix, f);
+
+    SCLog(RL_ZERO, "%sfinal_address: 0x%x", prefix, final_address);
+    // SCLog(RL_ZERO, "%snew_cs: 0x%x", prefix, new_cs);
+    // SCLog(RL_ZERO, "%snew_eip: 0x%x", prefix, new_eip);
+
+    char np[100];
+    strcpy(np, prefix);
+    strcat(np, "\t");
+    // if (this->dest) {
+    //     SCLog(RL_ZERO, "%sdest:");
+    //     this->dest->serialize(np);
+    // }
+    // if (this->src1) {
+    //     SCLog(RL_ZERO, "%ssrc1:");
+    //     this->src1->serialize(np);
+    // }
+    // if (this->src2) {
+    //     SCLog(RL_ZERO, "%ssrc2:");
+    //     this->src2->serialize(np);
+    // }
+    // if (this->src3) {
+    //     SCLog(RL_ZERO, "%ssrc3:");
+    //     this->src3->serialize(np);
+    // }
+
+    SCLog(RL_ZERO, "%s====END=SCInstr%d(0x%x)====",prefix, INSTRLIST->getInstrPos(this), this);
+}
+
 
 // ==== SCInstrList ====
 static SCInstrList* _sharedInstrList = NULL;
@@ -223,19 +288,16 @@ void SCInstrList::setInstrList(InstrListT &ins) {
 
 void SCInstrList::funResolveExitBlock() {
     InstrIterT instrIter;
-    SCLog(RL_ONE, "Total instr: %d", p_instrs.size());
+    // SCLog(RL_ONE, "Total instr: %d", p_instrs.size());
     for(instrIter=p_instrs.begin(); instrIter!=p_instrs.end(); ++instrIter) {
 
-        SCLog(RL_TWO, "%d: %s", std::distance(p_instrs.begin(), instrIter), (*instrIter)->assembly);
+        // SCLog(RL_TWO, "%d: %s(%x)", std::distance(p_instrs.begin(), instrIter), (*instrIter)->assembly, (*instrIter)->binary);
         if ((*instrIter)->isReturnClass()) {
-            // SCLog(RL_THREE, "Ret class: (%d)", std::distance(p_instrs.begin(), instrIter));
-            SCBlock* from = (*instrIter)->getBlock();
-            SCBlock* to = INSTR_FUNCTION(*instrIter)->getExitBlock();
             EDGELIST->addBBLEdge((*instrIter)->getBlock(), INSTR_FUNCTION(*instrIter)->getExitBlock(), ET_EXIT);
-            // SCLog(RL_THREE, "Ret class: edge added");
             continue;
         }
 
+        // Not useful currently
         if ((*instrIter)->isDataInstruction() && 
                 (*instrIter)->getBlock() == INSTR_FUNCTION(*instrIter)->getFirstBlock() && 
                 (*instrIter)->getBlock() == INSTR_FUNCTION(*instrIter)->getLastBlock()) 
@@ -243,7 +305,6 @@ void SCInstrList::funResolveExitBlock() {
             EDGELIST->addBBLEdge((*instrIter)->getBlock(), INSTR_FUNCTION(*instrIter)->getExitBlock(), ET_EXIT);
 
         }
-        SCLog(RL_TWO, "for end");
     }
 
     return;
@@ -268,6 +329,15 @@ void SCInstrList::resolveTargets() {
             continue;
         }
 
+        SCInstr* toIns = (*it)->getBranchTarget();
+
+        // PC changing class, divide target bbl by target instr
+        if (toIns && toIns->getBlock()->getFirstInstr()!=toIns) {
+            SCLog(RL_ONE, "hahahahahahahahaha");
+            BLOCKLIST->divideBBLByInstr(toIns->getBlock(), toIns);
+            SCLog(RL_ONE, "heheheheheheheheheeh");
+        }
+
         // 2: Conditional branch instr
         if ((*it)->isConditionalJmpClass()) {
             SCBlock* bbl = (*it)->getBlock();
@@ -275,8 +345,6 @@ void SCInstrList::resolveTargets() {
             if (nbbl) {
                 EDGELIST->addBBLEdge(bbl, nbbl, ET_FALSE);
             }
-            UINT32 addr = (*it)->getDest()->getOperand();
-            SCInstr *toIns = INSTRLIST->addrToInstr(addr);
             if (toIns) {
                 EDGELIST->addBBLEdge(bbl, toIns->getBlock(), ET_TRUE);
             }
@@ -286,8 +354,6 @@ void SCInstrList::resolveTargets() {
 
         // 3: Unconditional jump instr
         if ((*it)->isJmpClass()) {
-            UINT32 addr = (*it)->getDest()->getOperand();
-            SCInstr* toIns = INSTRLIST->addrToInstr(addr);
             if (toIns) {
                 EDGELIST->addBBLEdge((*it)->getBlock(), toIns->getBlock(), ET_UNCOND);
             }
@@ -299,12 +365,10 @@ void SCInstrList::resolveTargets() {
         if ((*it)->isCallClass()) {
             SCBlock* bbl = (*it)->getBlock();
             SCBlock* nbbl = BLOCKLIST->getNextBBL(bbl);
-            UINT32 addr = (*it)->getDest()->getOperand();
-            SCInstr* tins = INSTRLIST->addrToInstr(addr);
-            if (tins) {
-                EDGELIST->addBBLEdge(bbl, tins->getBlock(), ET_FUNCALL);
+            if (toIns) {
+                EDGELIST->addBBLEdge(bbl, toIns->getBlock(), ET_FUNCALL);
                 if (nbbl) {
-                    EDGELIST->addBBLEdge(tins->getBlock(), nbbl, ET_RETURN);
+                    EDGELIST->addBBLEdge(toIns->getBlock(), nbbl, ET_RETURN);
                 }
             }
             if (nbbl) {
@@ -380,6 +444,36 @@ SCInstr* SCInstrList::getNextInstr(SCInstr* ins) {
     return *it;
 }
 
+int SCInstrList::getInstrPos(SCInstr* ins) {
+    InstrIterT iit = std::find(p_instrs.begin(), p_instrs.end(), ins);
+    return std::distance(p_instrs.begin(), iit);
+}
+
+int SCInstrList::getOffset(SCInstr* first, SCInstr* second) {
+    InstrIterT fit = std::find(p_instrs.begin(), p_instrs.end(), first);
+    InstrIterT sit = std::find(p_instrs.begin(), p_instrs.end(), second);
+    if (fit==p_instrs.end() || sit==p_instrs.end())
+        return INVALID_32;
+
+    ++fit;
+    int dis = std::distance(fit, sit);
+    int offset = 0;
+    if (dis < 0) {
+        while(sit!=fit) {
+            offset += (*sit)->getSize();
+            ++sit;
+        }
+        offset = -offset;
+    }
+    else if (dis > 0) {
+        while(fit!=sit) {
+            offset += (*fit)->getSize();
+            ++fit;
+        }
+    }
+    return offset;
+}
+
 void SCInstrList::deleteInstrs(SCInstr* first, SCInstr* last) {
     if (!first || !last)
         return;
@@ -398,11 +492,33 @@ void SCInstrList::deleteInstrs(SCInstr* first, SCInstr* last) {
     p_instrs.erase(fit, lit);
 }
 
+void SCInstrList::serialize() {
+    for(InstrIterT iit=p_instrs.begin(); iit!=p_instrs.end(); ++iit) {
+        (*iit)->serialize();
+        SCLog(RL_ZERO,"");
+    }
+}
+
+void debug() {
+    SCLog(RL_TWO, "DEBUG:");
+    BlockListT bbls= BLOCKLIST->getBlockList();
+    for(BlockIterT bit=bbls.begin(); bit!=bbls.end(); ++bit) {
+        SCBlock* a = *bit;
+        EdgeListT e = a->getSucc();
+        SCLog(RL_THREE, "Current block:%x", a);
+        for(EdgeIterT eit=e.begin(); eit!=e.end(); ++eit) {
+            if ((*eit)->getFrom() != a)
+                SCLog(RL_FOUR, "%d: %x", std::distance(e.begin(), eit), (*eit)->getFrom());
+        }
+    }
+}
+
 void SCInstrList::constructCFG() {
     SCLog(RL_ONE, "test1");
     BLOCKLIST->markBBL();
     SCLog(RL_ONE, "test2");
     FUNLIST->markFunctions();
+    // INSTRLIST->serialize();
     SCLog(RL_ONE, "test3");
     BLOCKLIST->createBBLList();
     SCLog(RL_ONE, "test4");
@@ -413,4 +529,7 @@ void SCInstrList::constructCFG() {
     this->resolveTargets();
     SCLog(RL_ONE, "test7");
     FUNLIST->resolveEntrylessFunction();
+
+    // BLOCKLIST->serialize();
+    FUNLIST->serialize();
 }

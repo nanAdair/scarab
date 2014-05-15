@@ -39,6 +39,8 @@ typedef	UINT32			IFLAG;
 typedef INT64 			BFLAG;
 typedef UINT16			BTYPE;
 
+#define INVALID_32     -(1<<30)
+
 // ========== SCInstr & Operand ==========
 #define InstrIterT std::list< SCInstr* >::iterator
 #define InstrRIterT std::list< SCInstr* >::reverse_iterator

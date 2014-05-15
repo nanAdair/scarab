@@ -37,7 +37,6 @@ class SCFunction
 
         void setFirstBlock(SCBlock* bbl);
         void setLastBlock(SCBlock* bbl);
-        void setName(std::string& name);
         void setName(UINT8* name);
         void setName(const char*);
         void setEntryBlock(SCBlock* bbl);
@@ -45,12 +44,13 @@ class SCFunction
 
         SCBlock* getFirstBlock();
         SCBlock* getLastBlock();
-        std::string getName();
+        char* getName();
         SCBlock* getEntryBlock();
         SCBlock* getExitBlock();
         
         // methods
-    
+        void serialize(const char *prefix = "");
+        int getPos();
 
 
     private:
@@ -58,7 +58,7 @@ class SCFunction
         SCBlock *f_first;         // first basic block in this function 和f_entry不一样 n
         SCBlock *f_last;          // last basic block in this function n
         UINT32 f_id;                   // unique identifier for the function y
-        std::string f_name;                  // function name n
+        char* f_name;                  // function name n
         SCBlock *f_entry;                // entry block y
         SCBlock *f_exit;                 // exit block y
 };
@@ -72,6 +72,8 @@ class SCFunctionList {
         void markFunctions();
         void deleteFunctions(SCFunction* first, SCFunction* last);
         void resolveEntrylessFunction();
+        int getFunctionPos(SCFunction* fun);
+        void serialize();
 
     private:
         FunListT p_funs;

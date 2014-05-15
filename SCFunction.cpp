@@ -20,6 +20,7 @@
 #include <stdlib.h>
 #include <iterator>
 #include <vector>
+#include <algorithm>
 
 #include "SCInstr.h"
 #include "SCBlock.h"
@@ -30,7 +31,7 @@ SCFunction::SCFunction() {
     this->f_flags = 0;
     this->f_first = this->f_last = NULL;
     this->f_id = 0;     //TODO: global increase
-    this->f_name = "";
+    this->f_name = new char[20];
     this->f_entry = new SCBlock();
     this->f_exit = new SCBlock();
     f_entry->setType(BT_ENTRY);
@@ -49,15 +50,12 @@ void SCFunction::setFirstBlock(SCBlock *bbl) {
 void SCFunction::setLastBlock(SCBlock *bbl) {
     this->f_last= bbl;
 }
-void SCFunction::setName(string& name) {
-    this->f_name = name;
-}
 void SCFunction::setName(UINT8* name) {
     char *tn = (char*) name;
     this->f_name = tn;
 }
 void SCFunction::setName(const char* name) {
-    this->f_name = name;
+    strcpy(f_name, name);
 }
 void SCFunction::setEntryBlock(SCBlock* bbl) {
     this->f_entry = bbl;
@@ -72,7 +70,7 @@ SCBlock* SCFunction::getFirstBlock() {
 SCBlock* SCFunction::getLastBlock() {
     return this->f_last;
 }
-string SCFunction::getName() {
+char* SCFunction::getName() {
     return this->f_name;
 }
 SCBlock* SCFunction::getEntryBlock() {
@@ -80,6 +78,35 @@ SCBlock* SCFunction::getEntryBlock() {
 }
 SCBlock* SCFunction::getExitBlock() {
     return this->f_exit;
+}
+
+int SCFunction::getPos() {
+    return FUNLIST->getFunctionPos(this);
+}
+
+void SCFunction::serialize(const char *prefix) {
+    SCLog(RL_ZERO, "%s====SCFunction%d(0x%x)====", prefix, FUNLIST->getFunctionPos(this), this);
+    SCLog(RL_ZERO, "%sFunction name: %s", prefix, f_name);
+    SCLog(RL_ZERO, "%sFirst bbl: %d", prefix, BLOCKLIST->getBBLPos(f_first));
+    SCLog(RL_ZERO, "%sLast bbl: %d", prefix, BLOCKLIST->getBBLPos(f_last));
+
+    char np[100];
+    strcpy(np, prefix);
+    strcat(np, "\t");
+
+    // show all the instrs within this bbl
+    f_first->serialize(np);
+    SCLog(RL_ZERO, "");
+    if (f_first != f_last) {
+        SCBlock* bbl = f_first;
+        while((bbl=BLOCKLIST->getNextBBL(bbl)) != f_last) {
+            bbl->serialize(np);
+            SCLog(RL_ZERO, "");
+        }
+        f_last->serialize(np);
+    }
+
+    SCLog(RL_ZERO, "%s====END=SCFunction%d(0x%x)====", prefix, FUNLIST->getFunctionPos(this), this);
 }
 
 
@@ -98,35 +125,36 @@ SCFunctionList* SCFunctionList::sharedFunctionList() {
 }
 
 void SCFunctionList::createFunctionList() {
-    BlockIterT bblIter;
+    BlockIterT bit;
     BlockListT bbls = BLOCKLIST->getBlockList();
     SCFunction *fun;
-    for(bblIter=bbls.begin(); bblIter!=bbls.end(); ++bblIter) {
-        if ((*bblIter)->getFirstInstr()->hasFlag(FUN_START)) {
+    for(bit=bbls.begin(); bit!=bbls.end(); ++bit) {
+        if ((*bit)->getFirstInstr()->hasFlag(FUN_START)) {
 
             fun = new SCFunction();
-            fun->setFirstBlock(*bblIter); 
-            fun->setLastBlock(*bblIter);
-            fun->setName(SYMLISTREL->getSymNameByAddr((*bblIter)->getFirstInstr()->getAddr()));
+            fun->setFirstBlock(*bit); 
+            fun->setLastBlock(*bit);
+            fun->setName(SYMLISTREL->getSymNameByAddr((*bit)->getFirstInstr()->getAddr()));
+            SCLog(RL_ONE, "fun name: %s", fun->getName());
             
             (this->p_funs).push_back(fun);
         }
-        else if ((*bblIter)->getLastInstr()->hasFlag(FUN_END)) {
-            fun->setLastBlock(*bblIter);
+        else if ((*bit)->getLastInstr()->hasFlag(FUN_END)) {
+            fun->setLastBlock(*bit);
         }
-        (*bblIter) -> setFunction(fun);
+        (*bit) -> setFunction(fun);
     }
     return;
 }
 
 void SCFunctionList::markFunctions() {
-    // TODO: transplant it
     SymListRELT funSyms = SYMLISTREL->getFunSymList();
     SCInstr* ins;
     for (SymIterRELT it=funSyms.begin(); it!=funSyms.end(); ++it) {
         ins = INSTRLIST->addrToInstr((*it)->getSymbolValue());
         if (ins == NULL)
             continue;
+        SCLog(RL_ONE, "symbol(%s) at 0x%x, instr pos is %d", (*it)->getSymbolName(), (*it)->getSymbolValue(), ins->getPos());
         ins->setFlag(FUN_START);
         ins->setFlag(BBL_START);
 
@@ -178,3 +206,14 @@ void SCFunctionList::resolveEntrylessFunction() {
     }
 }
 
+int SCFunctionList::getFunctionPos(SCFunction* fun) {
+    FunIterT fit = std::find(p_funs.begin(), p_funs.end(), fun);
+    return std::distance(p_funs.begin(), fit);
+}
+
+void SCFunctionList::serialize() {
+    for(FunIterT fit=p_funs.begin(); fit!=p_funs.end(); ++fit) {
+        (*fit)->serialize();
+        SCLog(RL_ZERO, "");
+    }
+}
