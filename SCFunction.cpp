@@ -193,7 +193,7 @@ void SCFunctionList::resolveEntrylessFunction() {
                 // TODO: should restrict the oprand: push ebp; mov esp, ebp
                 if (first->isPushClass() && second->isMovClass())
                 {
-                    EDGELIST->addBBLEdge((*fit)->getEntryBlock(), (*bit), ET_ENTRY);
+                    BLOCKLIST->addBBLEdge((*fit)->getEntryBlock(), (*bit), ET_ENTRY);
                 }
             }
         }
@@ -201,7 +201,7 @@ void SCFunctionList::resolveEntrylessFunction() {
 
     for (FunIterT fit=p_funs.begin(); fit!=p_funs.end(); ++fit) {
         if ((*fit)->getEntryBlock()->getSucc().size() == 0) {
-            EDGELIST->addBBLEdge((*fit)->getEntryBlock(), (*fit)->getFirstBlock(), ET_ENTRY);
+            BLOCKLIST->addBBLEdge((*fit)->getEntryBlock(), (*fit)->getFirstBlock(), ET_ENTRY);
         }
     }
 }

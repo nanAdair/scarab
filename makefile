@@ -18,7 +18,7 @@ dis-table.o: dis-table.cpp dis-table.h SCInstr.h
 	g++ -c -std=c++11 dis-table.cpp
 upm.o: upm.h upm.cc
 	g++ -c upm.cc
-operand.o: type.h dis-table.h
+operand.o: type.h dis-table.h operand.cc
 	g++ -c operand.cc
 SCInstr.o: type.h SCInstr.h SCInstr.cpp operand.h
 	g++ -c SCInstr.cpp
@@ -31,4 +31,5 @@ SCEdge.o: SCEdge.h SCEdge.cpp type.h
 SCLog.o: SCLog.h SCLog.cpp
 	g++ -c SCLog.cpp
 clean:
-	rm -rf main *.o *~
+	#rm -rf main *.o *~
+	find . -name '*.o' -not -name 'obj.o' | xargs rm

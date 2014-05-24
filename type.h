@@ -358,6 +358,7 @@ enum OPERAND_SIZE{
 #define ET_CHAIN             17
 #define ET_SYSCALL           18
 #define ET_SYSCALL_LINK      19
+#define ET_OBF               20
 
 
 

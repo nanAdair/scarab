@@ -18,6 +18,7 @@
 #include "SCEdge.h"
 
 #include <algorithm>
+#include <cstring>
 #include "SCBlock.h"
 
 SCEdge::SCEdge() {
@@ -61,6 +62,33 @@ ETYPE SCEdge::getType() {
     return this->e_type;
 }
 
+void SCEdge::serialize(const char* prefix) {
+    SCLog(RL_ZERO, "%s====SCEdge====", prefix);
+
+    char ts[30] = {0};
+    if (e_type == ET_NORMAL)
+        strcpy(ts, "ET_NORMAL");
+    else if (e_type == ET_TRUE)
+        strcpy(ts, "ET_TRUE");
+    else if (e_type == ET_FALSE)
+        strcpy(ts, "ET_FALSE");
+    else if (e_type == ET_UNCOND)
+        strcpy(ts, "ET_UNCOND");
+    else if (e_type == ET_RETURN)
+        strcpy(ts, "ET_RETURN");
+    else if (e_type == ET_FUNLINK)
+        strcpy(ts, "ET_FUNLINK");
+    else if (e_type == ET_EXIT)
+        strcpy(ts, "ET_EXIT");
+    else if (e_type == ET_FUNCALL)
+        strcpy(ts, "ET_FUNCALL");
+    else if (e_type == ET_OBF)
+        strcpy(ts, "ET_OBF");
+
+    SCLog(RL_ZERO, "%sfrom: %d, to: %d, type: %d(%s)", prefix, e_from->getPos(), e_to->getPos(), e_type, ts);
+    SCLog(RL_ZERO, "%s====END=SCEdge====", prefix);
+}
+
 
 // ==== SCEdgeList ====
 
@@ -77,7 +105,7 @@ SCEdgeList::SCEdgeList() {
     _sharedEdgeList = this;
 }
 
-SCEdge* SCEdgeList::addBBLEdge(SCBlock* from, SCBlock* to, ETYPE type) {
+SCEdge* SCEdgeList::addEdge(SCBlock* from, SCBlock* to, ETYPE type) {
     if (edgeExistOrNot(from, to, type))
     {
         return getBBLEdge(from, to, type);
@@ -89,8 +117,6 @@ SCEdge* SCEdgeList::addBBLEdge(SCBlock* from, SCBlock* to, ETYPE type) {
     edge->setType(type);
 
     (this->p_edges).push_back(edge);
-    from->addSuccEdge(edge);
-    to->addPredEdge(edge);
 
     return edge;
 }
@@ -100,6 +126,15 @@ void SCEdgeList::removeBBLEdge(SCBlock* from, SCBlock* to, ETYPE type) {
     if (edge != NULL) {
         from->removeSuccEdge(edge);
         to->removePredEdge(edge);
+        removeEdge(edge);
+        delete edge;
+    }
+}
+void SCEdgeList::removeBBLEdge(SCEdge* edge) {
+    EdgeIterT eit = std::find(p_edges.begin(), p_edges.end(), edge);
+    if (eit != p_edges.end()) {
+        edge->getFrom()->removeSuccEdge(edge);
+        edge->getTo()->removePredEdge(edge);
         removeEdge(edge);
         delete edge;
     }

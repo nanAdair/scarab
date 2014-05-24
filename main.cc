@@ -62,7 +62,11 @@ int main(int argc, char *argv[])
     
     /* Obfuscation Stage */
     INSTRUCTION *dumpInstr = NULL;
+    // SCLog(RL_ONE, "BEFORE!");
+    // BLOCKLIST->serialize();
     dumpInstr = obfModify(insListPtr);
+    // SCLog(RL_ONE, "AFTER!");
+    // BLOCKLIST->serialize();
     
     /* Address Patching and Date Written Back */
     finalizeMemory(obj_sec_list, insListPtr, patch_list, dumpInstr);
@@ -120,10 +124,15 @@ INSTRUCTION *obfModify(InstrListT* inss)
             break;
     }
     
-    cout << "The address to be inserted: " << hex << (*it)->address << endl;
+    // cout << "The address to be inserted: " << hex << (*it)->address << endl;
+    SCLog(RL_ZERO, "The address to be inserted: 0x%x(%d)", (*it)->address, (*it)->getPos());
     dumpInstr->secType = (*it)->secType;
 
+    SCBlock* nbbl = new SCBlock();
+    nbbl->setFirstInstr(dumpInstr);
+    nbbl->setLastInstr(dumpInstr);
     INSTRLIST->addInsAfterIns(dumpInstr, *it);
+    BLOCKLIST->addBBLAfterBBL(nbbl, (*it)->getBlock());
     
     return dumpInstr;
 }
@@ -153,11 +162,16 @@ void obfPatch(InstrListT* instr_list, INSTRUCTION *dumpInstr)
     }
 }
 
-/* TODO: bbl succ list error*/
+
 int caculateJumpDisplacement(SCInstr *instr)
 {
-    SCInstr* target = instr->getBranchTarget();
-    return INSTRLIST->getOffset(instr, target);
+    SCInstr* target = instr->getBranchTargetByCFG();
+    // SCLog(RL_TWO, "source:");
+    // instr->serialize();
+    // SCLog(RL_TWO, "target:");
+    // target->serialize();
+    int r = INSTRLIST->getOffset(instr, target);
+    return r;
 
     // SCBlock* cur_block = instr->i_block;
 
@@ -179,11 +193,14 @@ void updatePCRelativeJumps(InstrListT *instr_list)
             if ((*it)->instr_class == CLASS_JE || (*it)->instr_class == CLASS_JMP) {
                 /* patch address based on the cfg*/
                 Operand* dest = (*it)->dest;
-                if(dest->operand_size == RELATIVE_ADDRESS_SHORT) {
+                // SCLog(RL_ONE, "Now instr(%d) and its dest: 0x%x", (*it)->getPos(), dest);
+                if(dest->operand_size==RELATIVE_ADDRESS_SHORT || dest->operand_size==RELATIVE_ADDRESS_FAR_DWORD) {
                     int offset;
                     offset = caculateJumpDisplacement(*it);
                     SCLog(RL_ONE, "CFG based patch: instr(%d), old disp(0x%x), new disp(0x%x)", (*it)->getPos(), dest->operand, offset);
                     dest->operand = offset;
+                    memcpy((*it)->binary + 1, &(dest->operand), sizeof(dest->operand));
+                    // (*it)->serialize();
                 }
                 
             }
@@ -193,8 +210,6 @@ void updatePCRelativeJumps(InstrListT *instr_list)
 
 void finalizeMemory(SCSectionList *sl, InstrListT* instr_list, SCPatchList *patch_list, SCInstr *dumpInstr)
 {
-    //InstrRelinkBasedOnBBL();
-
     int change = 0;
     
     do {

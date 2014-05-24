@@ -73,8 +73,14 @@ class SCBlock
         bool predBBLExistOrNot(SCBlock* bbl);
         void removePredEdge(SCEdge* edge);
         void removeSuccEdge(SCEdge* edge);
+        // remove the edge that goes to bbl
+        void removeSuccEdge(SCBlock* bbl);
+        // remove the edge that comes from bbl
+        void removePredEdge(SCBlock* bbl);
 
         int getPos();
+        SCBlock* nextBBL();
+        SCBlock* prevBBL();
         void serialize(const char* prefix);
 
 
@@ -115,7 +121,8 @@ class SCBlockList
         BlockIterT getIterByBBL(SCBlock* bbl);
         void addBBLBeforeBBL(SCBlock* bbl, SCBlock* pivot);
         void addBBLAfterBBL(SCBlock* bbl, SCBlock* pivot);
-        void addBBLBack(SCBlock* bbl);
+        void addBBLBack(SCBlock* bbl, ETYPE type);
+        void addBBLEdge(SCBlock* from, SCBlock* to, ETYPE type);
         void deleteBBLs(SCBlock* first, SCBlock* last);
         int getBBLPos(SCBlock* bbl);
         // void removeBBLsFromList(SCBlock* first, SCBlock* last);

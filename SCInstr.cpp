@@ -208,9 +208,32 @@ int SCInstr::getPos() {
     return INSTRLIST->getInstrPos(this);
 }
 
+SCInstr* SCInstr::nextIns() {
+    return INSTRLIST->getNextInstr(this);
+}
+
+SCInstr* SCInstr::prevIns() {
+    return INSTRLIST->getPrevInstr(this);
+}
+
 SCInstr* SCInstr::getBranchTarget() {
-    if (dest && (dest->type==OPERAND_IMMEDIATE)) {
-        return INSTRLIST->addrToInstr(final_address);
+    if (dest && (dest->type==OPERAND_FLOW)) {
+        // SCLog(RL_ONE, "getBranchTarget, find branch target addr: ", final_address);
+        SCInstr* target = INSTRLIST->addrToInstr(final_address);
+        // SCLog(RL_ONE, "target exist: %x", target);
+        return target;
+    }
+    return NULL;
+}
+
+SCInstr* SCInstr::getBranchTargetByCFG() {
+    SCBlock* bbl = i_block;
+    if (!bbl)
+        return NULL;
+    EdgeListT succ = bbl->getSucc();
+    for (EdgeIterT eit=succ.begin(); eit!=succ.end(); ++eit) {
+        if ((*eit)->getTo() != BLOCKLIST->getNextBBL(bbl))
+            return (*eit)->getTo()->getFirstInstr();
     }
     return NULL;
 }
@@ -232,16 +255,17 @@ void SCInstr::serialize(const char *prefix) {
         SCLog(RL_ZERO, "%sflags: %s", prefix, f);
 
     SCLog(RL_ZERO, "%sfinal_address: 0x%x", prefix, final_address);
+    SCLog(RL_ZERO, "%ssize: %d", prefix, size);
     // SCLog(RL_ZERO, "%snew_cs: 0x%x", prefix, new_cs);
     // SCLog(RL_ZERO, "%snew_eip: 0x%x", prefix, new_eip);
 
     char np[100];
     strcpy(np, prefix);
     strcat(np, "\t");
-    // if (this->dest) {
-    //     SCLog(RL_ZERO, "%sdest:");
-    //     this->dest->serialize(np);
-    // }
+    if (this->dest) {
+        SCLog(RL_ZERO, "%sdest:");
+        this->dest->serialize(np);
+    }
     // if (this->src1) {
     //     SCLog(RL_ZERO, "%ssrc1:");
     //     this->src1->serialize(np);
@@ -294,7 +318,7 @@ void SCInstrList::funResolveExitBlock() {
 
         // SCLog(RL_TWO, "%d: %s(%x)", std::distance(p_instrs.begin(), instrIter), (*instrIter)->assembly, (*instrIter)->binary);
         if ((*instrIter)->isReturnClass()) {
-            EDGELIST->addBBLEdge((*instrIter)->getBlock(), INSTR_FUNCTION(*instrIter)->getExitBlock(), ET_EXIT);
+            BLOCKLIST->addBBLEdge((*instrIter)->getBlock(), INSTR_FUNCTION(*instrIter)->getExitBlock(), ET_EXIT);
             continue;
         }
 
@@ -303,7 +327,7 @@ void SCInstrList::funResolveExitBlock() {
                 (*instrIter)->getBlock() == INSTR_FUNCTION(*instrIter)->getFirstBlock() && 
                 (*instrIter)->getBlock() == INSTR_FUNCTION(*instrIter)->getLastBlock()) 
         {
-            EDGELIST->addBBLEdge((*instrIter)->getBlock(), INSTR_FUNCTION(*instrIter)->getExitBlock(), ET_EXIT);
+            BLOCKLIST->addBBLEdge((*instrIter)->getBlock(), INSTR_FUNCTION(*instrIter)->getExitBlock(), ET_EXIT);
 
         }
     }
@@ -320,10 +344,10 @@ void SCInstrList::resolveTargets() {
                 !(EDGELIST->edgeExistOrNot((*it)->getBlock(), BLOCKLIST->getNextBBL((*it)->getBlock())))) {
                 if (BLOCKLIST->getNextBBL((*it)->getBlock()) == NULL) {
                     // last bbl in the program
-                    EDGELIST->addBBLEdge((*it)->getBlock(), HELL, ET_HELL);
+                    BLOCKLIST->addBBLEdge((*it)->getBlock(), HELL, ET_HELL);
                 }
                 else {
-                    EDGELIST->addBBLEdge((*it)->getBlock(), BLOCKLIST->getNextBBL((*it)->getBlock()), ET_NORMAL);
+                    BLOCKLIST->addBBLEdge((*it)->getBlock(), BLOCKLIST->getNextBBL((*it)->getBlock()), ET_NORMAL);
                 }
             }
             (*it)->getBlock()->setType(BT_NORMAL);
@@ -334,47 +358,60 @@ void SCInstrList::resolveTargets() {
 
         // PC changing class, divide target bbl by target instr
         if (toIns && toIns->getBlock()->getFirstInstr()!=toIns) {
-            SCLog(RL_ONE, "hahahahahahahahaha");
+            // SCLog(RL_ONE, "hahahahahahahahaha");
             BLOCKLIST->divideBBLByInstr(toIns->getBlock(), toIns);
-            SCLog(RL_ONE, "heheheheheheheheheeh");
+            // SCLog(RL_ONE, "heheheheheheheheheeh");
         }
 
         // 2: Conditional branch instr
-        if ((*it)->isConditionalJmpClass()) {
+        if ((*it)->isConditionalJmpClass() && (*it)->getDest()->type==OPERAND_FLOW) {
             SCBlock* bbl = (*it)->getBlock();
             SCBlock* nbbl = BLOCKLIST->getNextBBL(bbl);
             if (nbbl) {
-                EDGELIST->addBBLEdge(bbl, nbbl, ET_FALSE);
+                BLOCKLIST->addBBLEdge(bbl, nbbl, ET_FALSE);
             }
             if (toIns) {
-                EDGELIST->addBBLEdge(bbl, toIns->getBlock(), ET_TRUE);
+                BLOCKLIST->addBBLEdge(bbl, toIns->getBlock(), ET_TRUE);
             }
-            // TODO: what if target ins is NULL
+            else {
+                SCLog(RL_ONE, "[resolveTargets]WARNING: ins %d cond jump to NULL!", (*it)->getPos());
+                continue;
+            }
+            SCLog(RL_ONE, "[resolveTargets]Conditional jump: %d jump to %d.", (*it)->getPos(), toIns->getPos());
             continue;
         }
 
         // 3: Unconditional jump instr
-        if ((*it)->isJmpClass()) {
+        if ((*it)->isJmpClass() && (*it)->getDest()->type==OPERAND_FLOW) {
             if (toIns) {
-                EDGELIST->addBBLEdge((*it)->getBlock(), toIns->getBlock(), ET_UNCOND);
+                BLOCKLIST->addBBLEdge((*it)->getBlock(), toIns->getBlock(), ET_UNCOND);
             }
-            // TODO: what if target ins is NULL
+            else {
+                SCLog(RL_ONE, "[resolveTargets]WARNING: ins %d jump to NULL!", (*it)->getPos());
+                continue;
+            }
+            SCLog(RL_ONE, "[resolveTargets]Unconditional jump: %d jump to %d.", (*it)->getPos(), toIns->getPos());
             continue;
         }
 
         // 4: Call instr
-        if ((*it)->isCallClass()) {
+        if ((*it)->isCallClass() && (*it)->getDest()->type==OPERAND_FLOW) {
             SCBlock* bbl = (*it)->getBlock();
             SCBlock* nbbl = BLOCKLIST->getNextBBL(bbl);
+            if (nbbl) {
+                BLOCKLIST->addBBLEdge(bbl, nbbl, ET_FUNLINK);
+            }
             if (toIns) {
-                EDGELIST->addBBLEdge(bbl, toIns->getBlock(), ET_FUNCALL);
+                BLOCKLIST->addBBLEdge(bbl, toIns->getBlock(), ET_FUNCALL);
                 if (nbbl) {
-                    EDGELIST->addBBLEdge(toIns->getBlock(), nbbl, ET_RETURN);
+                    BLOCKLIST->addBBLEdge(toIns->getBlock(), nbbl, ET_RETURN);
                 }
             }
-            if (nbbl) {
-                EDGELIST->addBBLEdge(bbl, nbbl, ET_FUNLINK);
+            else {
+                SCLog(RL_ONE, "[resolveTargets]WARNING: ins %d call to NULL!", (*it)->getPos());
+                continue;
             }
+            SCLog(RL_ONE, "[resolveTargets]Call: %d call to %d.", (*it)->getPos(), toIns->getPos());
 
             continue;
         }
@@ -424,7 +461,6 @@ void SCInstrList::addInsAfterIns(SCInstr* ins, SCInstr* pivot) {
 
     ++pit;
     p_instrs.insert(pit, ins);
-    std::cout << "here comes the instr" << std::endl;
     mapAddrToIns(ins);
 }
 
@@ -458,16 +494,23 @@ int SCInstrList::getOffset(SCInstr* first, SCInstr* second) {
         return INVALID_32;
 
     ++fit;
-    int dis = std::distance(fit, sit);
+    int dis = (*fit)->getPos() - (*sit)->getPos();
     int offset = 0;
-    if (dis < 0) {
+    // SCLog(RL_THREE, "first:");
+    // (*fit)->serialize();
+    // SCLog(RL_THREE, "second:");
+    // (*sit)->serialize();
+    // SCLog(RL_THREE, "[getOffset] dis: %d, total: %d", dis, p_instrs.size());
+    if (dis > 0) {
+        // SCLog(RL_THREE, "[getOffset]1111");
         while(sit!=fit) {
             offset += (*sit)->getSize();
             ++sit;
         }
         offset = -offset;
     }
-    else if (dis > 0) {
+    else if (dis < 0) {
+        // SCLog(RL_THREE, "[getOffset]2222");
         while(fit!=sit) {
             offset += (*fit)->getSize();
             ++fit;
@@ -520,7 +563,6 @@ void SCInstrList::constructCFG() {
     BLOCKLIST->markBBL();
     SCLog(RL_ONE, "test2");
     FUNLIST->markFunctions();
-    // INSTRLIST->serialize();
     SCLog(RL_ONE, "test3");
     BLOCKLIST->createBBLList();
     SCLog(RL_ONE, "test4");
@@ -529,9 +571,10 @@ void SCInstrList::constructCFG() {
     this->funResolveExitBlock();
     SCLog(RL_ONE, "test6");
     this->resolveTargets();
-    SCLog(RL_ONE, "test7");
+    // BLOCKLIST->serialize();
+    // SCLog(RL_ONE, "test7");
     FUNLIST->resolveEntrylessFunction();
 
     // BLOCKLIST->serialize();
-    //FUNLIST->serialize();
+    // FUNLIST->serialize();
 }

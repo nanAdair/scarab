@@ -32,11 +32,16 @@ SCBlock::SCBlock() {
     b_first = b_last = NULL;
     b_id = ++this->GlobalID;
 }
+
 SCBlock::~SCBlock() {
-    for(EdgeIterT it=b_pred.begin();it!=b_pred.end();++it) {
+    for(EdgeIterT it=b_pred.begin(); it!=b_pred.end(); ++it) {
+        removePredEdge(*it);
+        EDGELIST->removeEdge(*it);
         delete *it;
     }
-    for(EdgeIterT it=b_succ.begin();it!=b_succ.end();++it) {
+    for(EdgeIterT it=b_succ.begin(); it!=b_succ.end(); ++it) {
+        removeSuccEdge(*it);
+        EDGELIST->removeEdge(*it);
         delete *it;
     }
     INSTRLIST->deleteInstrs(b_first, b_last);
@@ -147,6 +152,7 @@ void SCBlock::removePredEdge(SCEdge* edge) {
     EdgeIterT it = std::find(b_pred.begin(), b_pred.end(), edge);
     if (it!=b_pred.end()) {
         b_pred.erase(it);
+        edge->getFrom()->removeSuccEdge(edge);
     }
 }
 
@@ -154,6 +160,25 @@ void SCBlock::removeSuccEdge(SCEdge* edge) {
     EdgeIterT it = std::find(b_succ.begin(), b_succ.end(), edge);
     if (it!=b_succ.end()) {
         b_succ.erase(it);
+        edge->getTo()->removePredEdge(edge);
+    }
+}
+
+void SCBlock::removePredEdge(SCBlock* bbl) {
+    for(EdgeIterT it=b_pred.begin(); it!=b_pred.end(); ++it) {
+        if ((*it)->getFrom() == bbl) {
+            b_pred.erase(it);
+            bbl->removeSuccEdge(this);
+        }
+    }
+}
+
+void SCBlock::removeSuccEdge(SCBlock* bbl) {
+    for(EdgeIterT it=b_succ.begin(); it!=b_succ.end(); ++it) {
+        if ((*it)->getTo() == bbl) {
+            b_succ.erase(it);
+            bbl->removePredEdge(this);
+        }
     }
 }
 
@@ -161,31 +186,36 @@ int SCBlock::getPos() {
     return BLOCKLIST->getBBLPos(this);
 }
 
+SCBlock* SCBlock::nextBBL() {
+    return BLOCKLIST->getNextBBL(this);
+}
+
+SCBlock* SCBlock::prevBBL() {
+    return BLOCKLIST->getPrevBBL(this);
+}
+
 void SCBlock::serialize(const char* prefix) {
     SCLog(RL_ZERO, "%s====SCBlock%d(0x%x)====", prefix, BLOCKLIST->getBBLPos(this), this);
     SCLog(RL_ZERO, "%sFirst instr: %d", prefix, INSTRLIST->getInstrPos(b_first));
     SCLog(RL_ZERO, "%sLast instr: %d", prefix, INSTRLIST->getInstrPos(b_last));
 
-    // show neighbors, both pred and succ
-    char neighbor[50] = {0};
-    sprintf(neighbor, "Pred(%d): ", b_pred.size());
-    for(EdgeIterT eit=b_pred.begin(); eit!=b_pred.end(); ++eit) {
-        sprintf(neighbor+strlen(neighbor), "%d ", (*eit)->getFrom()->getPos());
-    }
-    SCLog(RL_ZERO, "%s%s", prefix, neighbor);
-
-    neighbor[0] = 0;
-    sprintf(neighbor, "Succ(%d): ", b_succ.size());
-    for(EdgeIterT eit=b_succ.begin(); eit!=b_succ.end(); ++eit) {
-        sprintf(neighbor+strlen(neighbor), "%d ", (*eit)->getTo()->getPos());
-    }
-    SCLog(RL_ZERO, "%s%s", prefix, neighbor);
-
     char np[100];
     strcpy(np, prefix);
     strcat(np, "\t");
 
+    // show neighbors, both pred and succ
+    SCLog(RL_ZERO, "%sPred(%d): ", prefix, b_pred.size());
+    for(EdgeIterT eit=b_pred.begin(); eit!=b_pred.end(); ++eit) {
+        (*eit)->serialize(np);
+    }
+
+    SCLog(RL_ZERO, "%sSucc(%d): ", prefix, b_succ.size());
+    for(EdgeIterT eit=b_succ.begin(); eit!=b_succ.end(); ++eit) {
+        (*eit)->serialize(np);
+    }
+
     // show all the instrs within this bbl
+    SCLog(RL_ZERO, "%sInstructions: ", prefix);
     b_first->serialize(np);
     SCLog(RL_ZERO, "");
     if (b_first != b_last) {
@@ -236,15 +266,7 @@ void SCBlockList::createBBLList() {
     InstrListT instrs = INSTRLIST->getInstrList(); 
     SCBlock *bbl;
     for(iit=instrs.begin(); iit!=instrs.end(); ++iit) {
-        // if ((*iit)->address == 0x804827a) {
-        //     SCLog(RL_ONE, "BINGO! out");
-        //     (*iit)->serialize();
-        // }
-
         if((*iit)->hasFlag(BBL_START)) {
-            // if ((*iit)->address == 0x804827a)
-            //     SCLog(RL_ONE, "BINGO!");
-
             bbl = new SCBlock();
             bbl->setFirstInstr(*iit);
             bbl->setLastInstr(*iit);
@@ -287,9 +309,10 @@ void SCBlockList::markBBL() {
 }
 
 void SCBlockList::divideBBLByInstr(SCBlock* bbl, SCInstr* ins) {
-    
+    SCLog(RL_ONE, "[divideBBLByInstr] bbl: %d(0x%x); ins: %d(0x%x)", bbl->getPos(), bbl, ins->getPos(), ins);
     if (ins->hasFlag(BBL_START)) {
-        // Report(RT_MAIN, "Attempt to devide BBL with an instruction that start a BBL\n");
+        SCLog(RL_ONE, "[divideBBLByInstr]Attempt to devide BBL with an instruction that start a BBL");
+        SCLog(RL_ONE, "ins: %d(0x%x), first instr: %d(0x%x), bbl of first: %d", ins->getPos(), ins, ins->getBlock()->getFirstInstr()->getPos(), ins->getBlock()->getFirstInstr(), ins->getBlock()->getPos());
         return;
     }
     
@@ -298,9 +321,13 @@ void SCBlockList::divideBBLByInstr(SCBlock* bbl, SCInstr* ins) {
     
     BlockIterT bblIt = std::find(p_bbls.begin(), p_bbls.end(), bbl);
     if (bblIt == p_bbls.end()) {
-        // Report(RP_MAIN, "FATAL: bbl not in the list!");
+        SCLog(RL_ONE, "[divideBBLByInstr]FATAL: bbl not in the list!");
     }
     p_bbls.insert(++bblIt, nbbl);
+
+    nbbl->setLastInstr(bbl->getLastInstr());
+    bbl->setLastInstr(ins->prevIns());
+    nbbl->setFirstInstr(ins);
 
     bbl->moveSuccEdgesToBBL(nbbl);
     nbbl->setFlag(bbl->getFlag());
@@ -313,13 +340,14 @@ void SCBlockList::divideBBLByInstr(SCBlock* bbl, SCInstr* ins) {
     }
 
     // Tell the instructions about the change.
-    InstrIterT insIter = std::find(INSTRLIST->getInstrList().begin(), INSTRLIST->getInstrList().end(), ins);
-    while(insIter != INSTRLIST->getInstrList().end()) {
-        (*insIter)->setBlock(nbbl);
-        if ((*insIter)->hasFlag(BBL_END)) {
+    InstrListT inss = INSTRLIST->getInstrList();
+    InstrIterT iit = std::find(inss.begin(), inss.end(), ins);
+    while(iit != inss.end()) {
+        (*iit)->setBlock(nbbl);
+        if ((*iit)->hasFlag(BBL_END)) {
             break;
         }
-        ++insIter;
+        ++iit;
     }
 
     // Update the info of the original bbl.
@@ -327,7 +355,7 @@ void SCBlockList::divideBBLByInstr(SCBlock* bbl, SCInstr* ins) {
     bbl->setLastInstr(prevIns);
 
     // Add an edge between the two bbls.
-    SCEdge* edge = EDGELIST->addBBLEdge(bbl, nbbl, ET_NORMAL);
+    BLOCKLIST->addBBLEdge(bbl, nbbl, ET_NORMAL);
 
     if (bbl == bbl->getFunction()->getLastBlock()) {
         bbl->getFunction()->setLastBlock(nbbl);
@@ -358,16 +386,85 @@ BlockIterT SCBlockList::getIterByBBL(SCBlock* bbl) {
     return std::find(p_bbls.begin(), p_bbls.end(), bbl);
 }
 
+/*
+ * This function will handle the relationship of CFG edge with previous neighbor.
+ * Just add the wanted branch edge, and this function will handle all the 
+ * other stuff.
+ */
 void SCBlockList::addBBLBeforeBBL(SCBlock* bbl, SCBlock* pivot) {
-    // TODO
+    if (!bbl || !pivot)
+        return;
+    BlockIterT pit = std::find(p_bbls.begin(), p_bbls.end(), pivot);
+    if (pit==p_bbls.end())
+        return;
+
+    int cnt = 0;
+    EdgeListT pred = pivot->getPred();
+    SCBlock* pbbl = pivot->prevBBL();
+    for (EdgeIterT eit=pred.begin(); eit!=pred.end(); ++eit) {
+        if ((*eit)->getType()==ET_NORMAL || (*eit)->getType()==ET_FALSE || (*eit)->getType()==ET_FUNLINK) {
+            if ((*eit)->getFrom() == pbbl) {
+                addBBLEdge(pbbl, bbl, (*eit)->getType());
+                EDGELIST->removeBBLEdge(*eit);  
+                ++cnt;  
+            }
+        }
+    }
+
+    if (cnt >= 1) {
+        SCLog(RL_ONE, "[addBBLBeforeBBL]WARNING: multiple direct predecessors(%d)!", cnt);
+    }
+
+    addBBLEdge(bbl, pivot, ET_OBF);
+    p_bbls.insert(pit, bbl);
 }
 
+/*
+ * This function will handle the relationship of CFG edge with next neighbor.
+ * Just add the wanted branch edge, and this function will handle all the 
+ * other stuff.
+ */
 void SCBlockList::addBBLAfterBBL(SCBlock* bbl, SCBlock* pivot) {
-    // TODO
+    if (!bbl || !pivot)
+        return;
+    BlockIterT pit = std::find(p_bbls.begin(), p_bbls.end(), pivot);
+    if (pit==p_bbls.end())
+        return;
+    ++pit;
+
+    int cnt = 0;
+    EdgeListT succ = pivot->getSucc();
+    SCBlock* nbbl = pivot->nextBBL();
+    for (EdgeIterT eit=succ.begin(); eit!=succ.end(); ++eit) {
+        if ((*eit)->getType()==ET_NORMAL || (*eit)->getType()==ET_FALSE || (*eit)->getType()==ET_FUNLINK) {
+            if ((*eit)->getTo() == nbbl) {
+                addBBLEdge(bbl, nbbl, ET_OBF);
+                EDGELIST->removeBBLEdge(*eit);    
+                ++cnt;
+            }
+        }
+    }
+    if (cnt >= 1) {
+        SCLog(RL_ONE, "[addBBLAfterBBL]WARNING: multiple direct successors(%d)!", cnt);
+    }
+
+    addBBLEdge(pivot, bbl, ET_OBF);
+
+    p_bbls.insert(pit, bbl);
 }
 
-void SCBlockList::addBBLBack(SCBlock* bbl) {
-    // TODO
+void SCBlockList::addBBLBack(SCBlock* bbl, ETYPE type) {
+    if (!bbl)
+        return;
+    SCBlock* last = p_bbls.back();
+    addBBLEdge(last, bbl, type);
+    p_bbls.push_back(bbl);
+}
+
+void SCBlockList::addBBLEdge(SCBlock* from, SCBlock* to, ETYPE type) {
+    SCEdge* e = EDGELIST->addEdge(from, to, type);
+    from->addSuccEdge(e);
+    to->addPredEdge(e);
 }
 
 void SCBlockList::deleteBBLs(SCBlock* first, SCBlock* last) {
@@ -389,7 +486,7 @@ void SCBlockList::deleteBBLs(SCBlock* first, SCBlock* last) {
 
 int SCBlockList::getBBLPos(SCBlock* bbl) {
     BlockIterT bit = std::find(p_bbls.begin(), p_bbls.end(), bbl);
-    return std::distance(p_bbls.begin(), bit);
+    return (bit==p_bbls.end())?-1:std::distance(p_bbls.begin(), bit);
 }
 
 // void SCBlockList::removeBBLsFromList(SCBlock* first, SCBlock* last) {

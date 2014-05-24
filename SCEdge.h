@@ -48,6 +48,7 @@ class SCEdge
         SCBlock* getFrom();
         ETYPE getType();
 
+        void serialize(const char* prefix = "");
 
 
     private:
@@ -72,9 +73,10 @@ class SCEdgeList
         SCEdgeList ();                             /* constructor */
         static SCEdgeList* sharedEdgeList();
 
-        SCEdge* addBBLEdge(SCBlock* from, SCBlock* to, ETYPE type);
+        SCEdge* addEdge(SCBlock* from, SCBlock* to, ETYPE type);
         void removeBBLEdge(SCBlock* from, SCBlock* to, ETYPE type);
-        void removeEdge(SCEdge* edge);
+        void removeBBLEdge(SCEdge* edge);
+        void removeEdge(SCEdge* edge);  // only remove from the list
         bool edgeExistOrNot(SCEdge* edge);
         bool edgeExistOrNot(SCBlock* from, SCBlock* to);
         bool edgeExistOrNot(SCBlock* from, SCBlock* to, ETYPE type);

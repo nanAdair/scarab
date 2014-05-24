@@ -1,5 +1,6 @@
 
 #include "operand.h"
+#include <cstring>
 
 Operand::Operand(): segment(0),operand(0),
 	operand_size(0),type(0),scale(0),
@@ -78,6 +79,23 @@ void Operand::serialize(const char* prefix) {
     SCLog(RL_ZERO, "%soperand_size: %d", prefix, operand_size);
     SCLog(RL_ZERO, "%sdisplacement: 0x%x", prefix, displacement);
     SCLog(RL_ZERO, "%sdisplacement_size: %d", prefix, displacement_size);
+
+    char tp[30] = {0};
+    if (type == OPERAND_IMMEDIATE)
+    	strcpy(tp, "OPERAND_IMMEDIATE");
+    else if (type == OPERAND_MEMORY)
+		strcpy(tp, "OPERAND_MEMORY");
+	else if (type == OPERAND_REGISTER)
+		strcpy(tp, "OPERAND_REGISTER");
+	else if (type == OPERAND_SEGMENT)
+		strcpy(tp, "OPERAND_SEGMENT");
+	else if (type == OPERAND_FLOAT)
+		strcpy(tp, "OPERAND_FLOAT");
+	else if (type == OPERAND_FLOW)
+		strcpy(tp, "OPERAND_FLOW");
+	
+
+    SCLog(RL_ZERO, "%stype: %d(%s)", prefix, type, tp);
 
     SCLog(RL_ZERO, "%s====END=Operand(%x)====", prefix, this);
 }

@@ -72,7 +72,10 @@ class SCInstr
         bool isOnlyInstrInBBL();
 
         int getPos();
-        SCInstr* getBranchTarget(); // Only non-NULL when it is intrafunction jump class
+        SCInstr* nextIns();
+        SCInstr* prevIns();
+        SCInstr* getBranchTarget(); // Only non-NULL when it is intrafunction jump class, valid before manipulate instr
+        SCInstr* getBranchTargetByCFG();    // Valid after cfg is built
         void updateLength();
         void serialize(const char* prefix = "");
 
@@ -160,6 +163,8 @@ class SCInstrList
         void addInstrBack(SCInstr* ins);
         void addInsBeforeIns(SCInstr* ins, SCInstr* pivot);
         void addInsAfterIns(SCInstr* ins, SCInstr* pivot);
+        void addInssBeforeIns(InstrListT inss, SCInstr* pivot);
+        void addInssAfterIns(InstrListT inss, SCInstr* pivot);
 
         SCInstr* getPrevInstr(SCInstr* ins);
         SCInstr* getNextInstr(SCInstr* ins);

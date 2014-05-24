@@ -1,0 +1,4 @@
+1. 添加指令及bbl
+	如果指令及bbl都是自己新建的，则需要先调用INSTRLIST->addInsxxx()函数把指令插入进去，然后新建SCBlock并使用setFirstInstr()和setLastInstr()设置开始及结束的指令，再调用BLOCKLIST->addBBLxxx()把bbl插入现有bbl序列。新建的BBL只需要把混淆使用到的跳转边加入到succ和pred中，此BBL插入CFG后与原邻居BBL的边则由BLOCKLIST->addBBLxxx()处理。
+
+2. 给两个现有的bbl插入边：BLOCKLIST->addBBLEdge()

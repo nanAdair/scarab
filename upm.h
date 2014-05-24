@@ -19,6 +19,8 @@
 /* 32:      meaning the value is absolute to the destination address
  * PC32:    meaning the value is relative to the destination address*/
 
+ // TODO: 为间接寻址添加一个upm类型: RegOffsetToInstr
+
 #ifndef SCUPM_H
 #define SCUPM_H
 
